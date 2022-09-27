@@ -30,7 +30,7 @@ server.listen(8080, function () {
 });
 
 server.get('/presents', function (req, res, next) {
-  console.log('get present');
+  console.log('GET present')
   connection.query('select * from presents', function (error, results, fields) {
     if (error) throw error;
     console.log(results);
@@ -54,10 +54,21 @@ server.post('/presents', function (req, res) {
   });
  });
 
-server.put('/presents', function (req, res) {
-  connection.query('UPDATE `presents` SET `gifter`=?, where `id`=?', [req.body.gifter, req.body.id], function (error, results, fields) {
+server.put('/presents/:id', function (req, res, next) {
+  console.log('PUT present');
+  const updateData = [];
+
+  Object.keys(req.body).forEach((key, i) => {
+    updateData.push(` \`${key}\`='${req.body[key]}'`);
+  });
+
+  const queryString = `UPDATE \`presents\` SET ${updateData.join(',')} where \`id\`=${req.params.id}`;
+
+  connection.query(queryString, function (error, results, fields) {
     if (error) throw error;
-    res.end(JSON.stringify(results));
+    console.log(results);
+    res.send(results);
+    next();
   });
  });
 
