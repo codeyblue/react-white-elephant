@@ -15,7 +15,7 @@ const Present = props => {
       }
       {
         data.status === 'open' &&
-        <button>Steal</button>
+        <button onClick={() => props.onPresentSteal(data.id)}>Steal</button>
       }
     </div>
   );

@@ -2,7 +2,8 @@ import './App.css';
 import Present from './components/Present';
 import { useCallback, useEffect, useState } from 'react';
 
-const currentUser = 2;
+const currentUser = 1;
+const nextUser = 2;
 
 function App() {
   const [presents, setPresents] = useState({});
@@ -47,6 +48,26 @@ function App() {
     await fetchPresents();
   }
 
+  const stealPresent = async id => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/presents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holder: nextUser })
+      });
+
+      const data = await response.json();
+
+      setPresents(data);
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
+    await fetchPresents();
+  }
+
   useEffect(() => {
     fetchPresents();
   }, [fetchPresents]);
@@ -54,7 +75,8 @@ function App() {
   let content = <p>No presents yet.</p>;
 
   if (presents.length > 0) {
-    const transformedPresents = presents.map(present => <Present key={present.id} data={present} onPresentOpen={openPresent} />);
+    const transformedPresents = 
+      presents.map(present => <Present key={present.id} data={present} onPresentOpen={openPresent} onPresentSteal={stealPresent} />);
     content = <div id='Present List'>{transformedPresents}</div>
   }
 
