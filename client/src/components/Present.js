@@ -15,7 +15,10 @@ const Present = props => {
       }
       {
         data.status === 'open' &&
-        <button onClick={() => props.onPresentSteal(data.id)}>Steal</button>
+        <>
+          History: {`${JSON.stringify(data.history)}`}
+          <button onClick={() => props.onPresentSteal(data.id)}>Steal</button>
+        </>
       }
     </div>
   );

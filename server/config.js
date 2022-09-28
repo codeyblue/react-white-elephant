@@ -9,11 +9,12 @@ module.exports = {
     env: process.env.NODE_ENV || 'development',
     port: process.env.PORT || 3000,
     db: {
-        get : mysql.createConnection({
+        get : mysql.createPool({
 			host     : 'localhost',
 			user     : 'root',
 			password : 'root',
-			database : 'Test'
+			database : 'react_white_elephant',
+            multipleStatements: true
 		})
     }
 }

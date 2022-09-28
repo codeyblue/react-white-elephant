@@ -21,7 +21,20 @@ function App() {
 
       const data = await response.json();
 
-      setPresents(data);
+      let tempPresents = [];
+      const uniquePresents = [...new Set(data.map(item => item.id))];
+      uniquePresents.forEach(id => {
+        const d = data.find(d => d.id === id);
+        tempPresents.push({
+          id,
+          gifter: d.gifter,
+          status: d.status,
+          holder: d.holder,
+          history: data.filter(h => h.id === id).map(h => { return { event: h.event }})
+        });
+      });
+
+      setPresents(tempPresents);
     } catch (error) {
       setError(error.message);
     }
@@ -32,10 +45,10 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8080/presents/${id}`, {
+      const response = await fetch(`http://localhost:8080/open-present/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'open', holder: currentUser })
+        body: JSON.stringify({ user: currentUser })
       });
 
       const data = await response.json();
@@ -52,10 +65,10 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8080/presents/${id}`, {
+      const response = await fetch(`http://localhost:8080/steal-present/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ holder: nextUser })
+        body: JSON.stringify({ from: currentUser, to: nextUser })
       });
 
       const data = await response.json();
