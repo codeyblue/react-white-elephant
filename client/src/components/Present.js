@@ -2,8 +2,6 @@ import { useState } from 'react';
 
 const Present = props => {
   const { data } = props;
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   return (
     <div data-testid='present' style={{width: '150px', height: '150px', backgroundColor: 'grey'}}>
@@ -17,9 +15,10 @@ const Present = props => {
         data.status === 'open' &&
         <>
           History: {`${JSON.stringify(data.history)}`}
-          <button onClick={() => props.onPresentSteal(data.id)}>Steal</button>
+          <button onClick={() => props.onPresentSteal(data)}>Steal</button>
         </>
-      }
+      } <br />
+      Max Steals: {`${data.maxSteals}`}
     </div>
   );
 };

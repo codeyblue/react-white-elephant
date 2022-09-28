@@ -2,8 +2,11 @@ import './App.css';
 import Present from './components/Present';
 import { useCallback, useEffect, useState } from 'react';
 
-const currentUser = 1;
-const nextUser = 2;
+const mockGameData = {
+  currentUser: 1,
+  nextUser: 2,
+  maxSteals: 3
+};
 
 function App() {
   const [presents, setPresents] = useState({});
@@ -25,12 +28,16 @@ function App() {
       const uniquePresents = [...new Set(data.map(item => item.id))];
       uniquePresents.forEach(id => {
         const d = data.find(d => d.id === id);
+        const history = data.filter(h => h.id === id).map(h => { return { event: h.event }});
         tempPresents.push({
           id,
           gifter: d.gifter,
           status: d.status,
           holder: d.holder,
-          history: data.filter(h => h.id === id).map(h => { return { event: h.event }})
+          history,
+          maxSteals: mockGameData.maxSteals && history.length >= mockGameData.maxSteals ?
+            true :
+            false
         });
       });
 
@@ -48,7 +55,7 @@ function App() {
       const response = await fetch(`http://localhost:8080/open-present/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: currentUser })
+        body: JSON.stringify({ user: mockGameData.currentUser })
       });
 
       const data = await response.json();
@@ -61,14 +68,20 @@ function App() {
     await fetchPresents();
   }
 
-  const stealPresent = async id => {
+  const stealPresent = async present => {
+    if (present.maxSteals) {
+      return;
+    }
+
+    const lock = present.history.length + 1 >= mockGameData.maxSteals;
+
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8080/steal-present/${id}`, {
+      const response = await fetch(`http://localhost:8080/steal-present/${present.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: currentUser, to: nextUser })
+        body: JSON.stringify({ from: mockGameData.currentUser, to: mockGameData.nextUser, lock })
       });
 
       const data = await response.json();
@@ -90,7 +103,7 @@ function App() {
   if (presents.length > 0) {
     const transformedPresents = 
       presents.map(present => <Present key={present.id} data={present} onPresentOpen={openPresent} onPresentSteal={stealPresent} />);
-    content = <div id='Present List'>{transformedPresents}</div>
+    content = <div key='Present List'>{transformedPresents}</div>
   }
 
   if (error) {

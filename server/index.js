@@ -30,7 +30,7 @@ server.listen(8080, () => {
 });
 
 server.get('/presents', (req, res, next) => {
-  console.log('GET present')
+  console.log('GET presents')
   connection.query(
     'select presents.*, game_history.event from presents left join game_history on presents.id = game_history.present_key',
     (error, results, fields) => {
@@ -74,16 +74,22 @@ server.put('/open-present/:id', (req, res, next) => {
 
 server.put('/steal-present/:id', (req, res, next) => {
   console.log('PUT steal-present');
+  let status = 'open';
+  const events = ['INSERT INTO game_history SET event=\'steal\', present_key=' + req.params.id];
+  if (req.body.lock) {
+    events.push(';INSERT INTO game_history SET event=\'steal\', present_key=' + req.params.id);
+    status = 'locked';
+  }
 
   console.log('Update present');
-  connection.query('UPDATE presents SET holder=? where id=?', [req.body.to, req.params.id], (error, results, fields) => {
+  connection.query('UPDATE presents SET holder=?, status=? where id=?', [req.body.to, status, req.params.id], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
 
     console.log('Update history');
-    connection.query('INSERT INTO game_history SET event=?, present_key=?', ['steal', req.params.id], (error, results, fields) => {
+    connection.query(events.join(''), (error, results, fields) => {
       if (error) {
-        connection.query('UPDATE presents SET holder=? where id=?', [req.body.from, req.params.id], (error, results, fields) => {
+        connection.query('UPDATE presents SET holder=?, status=? where id=?', [req.body.from, status, req.params.id], (error, results, fields) => {
           if (error) {
             throw error;
           }
