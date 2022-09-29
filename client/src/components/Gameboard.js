@@ -95,34 +95,24 @@ const Gameboard = () => {
         return false;
       }
 
-      participants.forEach(participant => {
-        const participantPresents = presents.filter(present => present.gifter === participant.user_key);
-        if (participantPresents.length !== 1) {
-          return false;
-        }
-      });
-      return true;
+      return participants.filter(participant => {
+        return presents.filter(present => present.gifter === participant.user_key).length != 1;
+      }).length === 0;
     }
 
     return false;
   }, [participants, presents]);
 
   const allowGameStart = useCallback(async () => {
-    if (!allowGameReady()) {
+    if (!(await allowGameReady())) {
       return false;
     }
 
-    participants.forEach(participant => {
-      if (!participant.checkedin) {
-        return false;
-      }
-    });
-
-    return true;
+    return participants.filter(participant => participant.checkedin === 0).length === 0;
   }, [allowGameReady, participants]);
 
   const setGameReady = useCallback(async () => {
-    if (!allowGameReady()) {
+    if (!(await allowGameReady())) {
       return;
     }
     setIsLoading(true);
@@ -183,7 +173,7 @@ const Gameboard = () => {
   }, [shuffleParticipants, fetchParticipants, id, participants]);
 
   const setGameStart = useCallback(async () => {
-    if (!allowGameStart()) {
+    if (!(await allowGameStart())) {
       return;
     }
     setIsLoading(true);
