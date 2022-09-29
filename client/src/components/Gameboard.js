@@ -107,6 +107,20 @@ const Gameboard = () => {
     return false;
   }, [participants, presents]);
 
+  const allowGameStart = useCallback(async () => {
+    if (!allowGameReady()) {
+      return false;
+    }
+
+    participants.forEach(participant => {
+      if (!participant.checkedin) {
+        return false;
+      }
+    });
+
+    return true;
+  }, [allowGameReady, participants]);
+
   const setGameReady = useCallback(async () => {
     if (!allowGameReady()) {
       return;
@@ -127,6 +141,27 @@ const Gameboard = () => {
     setIsLoading(false);
     await fetchGame();
   }, [allowGameReady, fetchGame, id]);
+
+  const setGameStart = useCallback(async () => {
+    if (!allowGameStart()) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/start`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
+    await fetchGame();
+  }, [allowGameStart, fetchGame, id]);
 
   const openPresent = async id => {
     setIsLoading(true);
@@ -203,6 +238,10 @@ const Gameboard = () => {
     <div className="Gameboard">
       { game.status === 'setup' &&
         <button onClick={setGameReady}>Ready</button>
+      }
+      {
+        game.status === 'ready' &&
+        <button onClick={setGameStart}>Start Game</button>
       }
       {participantContent}
       {presentContent}

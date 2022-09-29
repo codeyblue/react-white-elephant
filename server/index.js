@@ -83,6 +83,16 @@ server.post('/game/:id/ready', (req, res, next) => {
   });
 });
 
+server.post('/game/:id/start', (req, res, next) => {
+  console.log('POST game start');
+  connection.query('UPDATE games SET status=? where id=?', ['inprogress', req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
 server.put('/presents/:id', (req, res, next) => {
   console.log('PUT present');
   const updateData = [];
