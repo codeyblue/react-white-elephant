@@ -41,7 +41,7 @@ const Gameboard = () => {
       }
 
       const data = await response.json();
-      setParticipants(data);
+      setParticipants(data.sort((a, b) => { return a.turn - b.turn }));
     } catch (error) {
       setError(error.message);
     }
@@ -142,6 +142,46 @@ const Gameboard = () => {
     await fetchGame();
   }, [allowGameReady, fetchGame, id]);
 
+  const shuffleParticipants = useCallback(() => {
+    const ids = participants.map(participant => participant.id);
+
+    let currentIndex = ids.length;
+    let randomIndex;
+
+    while (currentIndex !== 0) {
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      [ids[currentIndex], ids[randomIndex]] = [ids[randomIndex], ids[currentIndex]];
+    }
+
+    return ids.map((id, index) => {
+      return {
+        participant: id,
+        turn: index
+      };
+    });
+  }, [participants]);
+
+  const setParticipantTurns = useCallback(async () => {
+    const order = shuffleParticipants();
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/participants/set-turns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order })
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
+    await fetchParticipants();
+  }, [shuffleParticipants, fetchParticipants, id, participants]);
+
   const setGameStart = useCallback(async () => {
     if (!allowGameStart()) {
       return;
@@ -161,7 +201,8 @@ const Gameboard = () => {
     }
     setIsLoading(false);
     await fetchGame();
-  }, [allowGameStart, fetchGame, id]);
+    await setParticipantTurns();
+  }, [allowGameStart, fetchGame, id, setParticipantTurns]);
 
   const openPresent = async id => {
     setIsLoading(true);

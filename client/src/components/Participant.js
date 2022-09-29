@@ -1,6 +1,5 @@
 const Participant = props => {
   const { data } = props;
-  console.log('participant')
   return (
     <>
       <div key={data.id} style={{ backgroundColor: 'pink' }}>

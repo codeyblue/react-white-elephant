@@ -59,6 +59,19 @@ server.get('/game/:id/participants', (req, res, next) => {
   });
 });
 
+server.put('/game/:id/participants/set-turns', (req, res, next) => {
+  console.log('PUT participant turns');
+  let { order } = req.body;
+  order = order.map(turn => `(${turn.participant}, ${turn.turn}, -1, ${req.params.id})`);
+  const queryString = `INSERT INTO participants (id, turn, user_key, game_key) VALUES ${order.join(',')} AS \`order\` ON DUPLICATE KEY UPDATE turn = \`order\`.turn`;
+  connection.query(queryString, (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      res.send(results);
+      next();
+    });
+});
+
 server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
   connection.query(
