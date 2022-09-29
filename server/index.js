@@ -29,10 +29,31 @@ server.listen(8080, () => {
   console.log('%s listening at %s', server.name, server.url);
 });
 
-server.get('/presents', (req, res, next) => {
-  console.log('GET presents')
+server.get('/games', (req, res, next) => {
+  console.log('GET games');
+  connection.query('select id from games', (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
+server.get('/games/:id', (req, res, next) => {
+  console.log('GET game');
+  connection.query('select * from games where id=?', [req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
+server.get('/game/:id/presents', (req, res, next) => {
+  console.log('GET presents');
   connection.query(
-    'select presents.*, game_history.event from presents left join game_history on presents.id = game_history.present_key',
+    'select presents.*, game_history.event from presents left join game_history on presents.id = game_history.present_key where presents.game_key=?',
+    [req.params.id],
     (error, results, fields) => {
       if (error) throw error;
       console.log(results);
