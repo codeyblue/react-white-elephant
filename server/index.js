@@ -43,8 +43,8 @@ server.get('/games/:id', (req, res, next) => {
   console.log('GET game');
   connection.query('select * from games where id=?', [req.params.id], (error, results, fields) => {
     if (error) throw error;
-    console.log(results);
-    res.send(results);
+    console.log(results[0]);
+    res.send(results[0]);
     next();
   });
 });
@@ -71,6 +71,16 @@ server.get('/game/:id/presents', (req, res, next) => {
       next();
     }
   );
+});
+
+server.post('/game/:id/ready', (req, res, next) => {
+  console.log('POST game ready');
+  connection.query('UPDATE games SET status=? where id=?', ['ready', req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
 });
 
 server.put('/presents/:id', (req, res, next) => {

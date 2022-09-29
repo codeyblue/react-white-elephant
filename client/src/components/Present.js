@@ -1,17 +1,18 @@
-import { useState } from 'react';
-
 const Present = props => {
-  const { data } = props;
+  const { data, gameStatus } = props;
 
   return (
     <div data-testid='present' style={{width: '150px', height: '150px', backgroundColor: 'grey'}}>
       Present <br />
+      Gifter: {data.gifter} <br />
       Holder: {(data.holder && `${data.holder}`) || ''} <br />
       {
+        gameStatus === 'inprogress' &&
         data.status === 'wrapped' &&
         <button onClick={() => props.onPresentOpen(data.id)}>Open</button>
       }
       {
+        gameStatus === 'inprogress' &&
         data.status === 'open' &&
         <>
           History: {`${JSON.stringify(data.history)}`}

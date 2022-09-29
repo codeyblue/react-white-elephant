@@ -29,7 +29,7 @@ const Gameboard = () => {
       setError(error.message);
     }
     setIsLoading(false);
-  }, []);
+  }, [id]);
 
   const fetchParticipants = useCallback(async () => {
     setIsLoading(true);
@@ -42,12 +42,11 @@ const Gameboard = () => {
 
       const data = await response.json();
       setParticipants(data);
-      console.log(data);
     } catch (error) {
       setError(error.message);
     }
     setIsLoading(false);
-  }, []);
+  }, [id]);
 
   const fetchPresents = useCallback(async () => {
     setIsLoading(true);
@@ -82,7 +81,52 @@ const Gameboard = () => {
       setError(error.message);
     }
     setIsLoading(false);
-  }, []);
+  }, [game.rule_maxstealsperpresent, id]);
+
+  useEffect(() => {
+    fetchGame();
+    fetchParticipants();
+    fetchPresents();
+  }, [fetchGame, fetchParticipants, fetchPresents]);
+
+  const allowGameReady = useCallback(() => {
+    if (participants.length > 1) {
+      if (presents.length !== participants.length) {
+        return false;
+      }
+
+      participants.forEach(participant => {
+        const participantPresents = presents.filter(present => present.gifter === participant.user_key);
+        if (participantPresents.length !== 1) {
+          return false;
+        }
+      });
+      return true;
+    }
+
+    return false;
+  }, [participants, presents]);
+
+  const setGameReady = useCallback(async () => {
+    if (!allowGameReady()) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/ready`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
+    await fetchGame();
+  }, [allowGameReady, fetchGame, id]);
 
   const openPresent = async id => {
     setIsLoading(true);
@@ -130,12 +174,6 @@ const Gameboard = () => {
     await fetchPresents();
   }
 
-  useEffect(() => {
-    fetchGame();
-    fetchParticipants();
-    fetchPresents();
-  }, [fetchGame, fetchParticipants, fetchPresents]);
-
   let participantContent = <p>No participants yet.</p>,
     presentContent = <p>No presents yet.</p>;
   
@@ -147,7 +185,9 @@ const Gameboard = () => {
 
   if (presents.length > 0) {
     const transformedPresents = 
-      presents.map(present => <Present key={present.id} data={present} onPresentOpen={openPresent} onPresentSteal={stealPresent} />);
+      presents.map(present => 
+        <Present key={present.id} data={present} gameStatus={game.status} onPresentOpen={openPresent} onPresentSteal={stealPresent} />
+      );
     presentContent = <div key='Present List'>{transformedPresents}</div>
   }
 
@@ -161,6 +201,9 @@ const Gameboard = () => {
 
   return (
     <div className="Gameboard">
+      { game.status === 'setup' &&
+        <button onClick={setGameReady}>Ready</button>
+      }
       {participantContent}
       {presentContent}
     </div>
