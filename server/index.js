@@ -49,8 +49,18 @@ server.get('/games/:id', (req, res, next) => {
   });
 });
 
+server.get('/game/:id/participants', (req, res, next) => {
+  console.log('GET game participants');
+  connection.query('select * from participants where game_key=?', [req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
 server.get('/game/:id/presents', (req, res, next) => {
-  console.log('GET presents');
+  console.log('GET game presents');
   connection.query(
     'select presents.*, game_history.event from presents left join game_history on presents.id = game_history.present_key where presents.game_key=?',
     [req.params.id],

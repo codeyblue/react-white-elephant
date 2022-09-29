@@ -1,3 +1,4 @@
+import Participant from './Participant';
 import Present from './Present';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -8,6 +9,7 @@ const mockGameData = require('../mockGameData.json');
 const Gameboard = () => {
   const {id} = useParams();
   const [game, setGame] = useState({});
+  const [participants, setParticipants] = useState([]);
   const [presents, setPresents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,6 +25,24 @@ const Gameboard = () => {
 
       const data = await response.json();
       setGame(data);
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const fetchParticipants = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/participants`);
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response.json();
+      setParticipants(data);
+      console.log(data);
     } catch (error) {
       setError(error.message);
     }
@@ -112,28 +132,37 @@ const Gameboard = () => {
 
   useEffect(() => {
     fetchGame();
+    fetchParticipants();
     fetchPresents();
-  }, [fetchGame, fetchPresents]);
+  }, [fetchGame, fetchParticipants, fetchPresents]);
 
-  let content = <p>No presents yet.</p>;
+  let participantContent = <p>No participants yet.</p>,
+    presentContent = <p>No presents yet.</p>;
+  
+  if (participants.length > 0) {
+    const transformedParticipants =
+      participants.map(participant => <Participant key={participant.id} data={participant} />);
+    participantContent = <div key='Participant List'>{transformedParticipants}</div>
+  }
 
   if (presents.length > 0) {
     const transformedPresents = 
       presents.map(present => <Present key={present.id} data={present} onPresentOpen={openPresent} onPresentSteal={stealPresent} />);
-    content = <div key='Present List'>{transformedPresents}</div>
+    presentContent = <div key='Present List'>{transformedPresents}</div>
   }
 
   if (error) {
-    content = <p>{error}</p>;
+    presentContent = <p>{error}</p>;
   }
 
   if (isLoading) {
-    content = <p>Loading...</p>;
+    presentContent = <p>Loading...</p>;
   }
 
   return (
     <div className="Gameboard">
-      {content}
+      {participantContent}
+      {presentContent}
     </div>
   );
 }
