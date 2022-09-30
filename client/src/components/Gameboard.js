@@ -6,6 +6,7 @@ import ParticipantList from './ParticipantList';
 const Gameboard = () => {
   const {id} = useParams();
   const [game, setGame] = useState({});
+  const [participants, setParticipants] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -90,6 +91,64 @@ const Gameboard = () => {
     setIsLoading(false);
   };
 
+  const setFinalRound = async () => {
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/final-round`, {
+        method: 'PUT'
+      });
+
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (error) {
+      setError(error.message);
+    }
+    await fetchGame();
+  }
+
+  const setGameComplete = async () => {
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/complete`, {
+        method: 'PUT'
+      });
+
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (erro) {
+      setError(error.message);
+    }
+    await fetchGame();
+  }
+
+  const pickNextChooser = () => {
+    let currentIndex = participants.findIndex(p => p.id === game.active_chooser);
+    let nextIndex = 0;
+
+    if (currentIndex + 1 < participants.length) {
+      nextIndex = currentIndex + 1;
+    } else {
+      if (game.status === 'final_round') {
+        setGameComplete();
+        putActiveChooser(null);
+        return;
+      } else {
+        setFinalRound();
+      }
+      console.log(game);
+    }
+
+    putActiveChooser(participants[nextIndex].id);
+    console.log(currentIndex);
+    console.log(nextIndex);
+  }
+
   const setGameStart = async () => {
     await postGameStart();
     await fetchGame();
@@ -111,12 +170,15 @@ const Gameboard = () => {
           gameId={id}
           maxPresentSteal={game.rule_maxstealsperpresent}
           gameStatus={game.status}
+          pickNextChooser={pickNextChooser}
           />
         <ParticipantList
           gameId={id}
           activeChooser={game.active_chooser}
           putActiveChooser={putActiveChooser}
           gameStatus={game.status}
+          participants={participants}
+          setParticipants={setParticipants}
           />
         </>
       }

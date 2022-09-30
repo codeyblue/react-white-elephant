@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Participant from './Participant';
 
 const ParticipantList = props => {
-  const { gameId, gameStatus, activeChooser, putActiveChooser } = props;
-  const [participants, setParticipants] = useState([]);
+  const { gameId, gameStatus, activeChooser, putActiveChooser, participants, setParticipants } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 

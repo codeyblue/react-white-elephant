@@ -52,7 +52,14 @@ const PresentList = props => {
   if (presents.length > 0) {
     const transformedPresents = 
       presents.map(present => 
-        <Present key={present.id} data={present} gameStatus={gameStatus} maxPresentSteal={maxPresentSteal} gameId={gameId} />
+        <Present
+          key={present.id}
+          data={present}
+          gameStatus={gameStatus}
+          maxPresentSteal={maxPresentSteal}
+          gameId={gameId}
+          pickNextChooser={props.pickNextChooser}
+          />
       );
     presentContent = <div key='Present List'>{transformedPresents}</div>
   }

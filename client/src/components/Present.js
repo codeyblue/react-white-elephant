@@ -24,6 +24,7 @@ const Present = props => {
     } catch (error) {
       setError(error.message);
     }
+    props.pickNextChooser();
     setIsLoading(false);
   };
 
@@ -38,7 +39,7 @@ const Present = props => {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/steal-present/${present.id}`, {
+      const response = await fetch(`http://localhost:8080/game/${gameId}/steal-present/${present.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ from: mockGameData.currentUser, to: mockGameData.nextUser, lock })
@@ -49,6 +50,7 @@ const Present = props => {
     } catch (error) {
       setError(error.message);
     }
+    props.pickNextChooser();
     setIsLoading(false);
   }
 
@@ -66,7 +68,7 @@ const Present = props => {
           <button onClick={() => openPresent(data.id)}>Open</button>
         }
         {
-          gameStatus === 'inprogress' &&
+          (gameStatus === 'inprogress' || gameStatus === 'final_round') &&
           data.status === 'open' &&
           <>
             History: {`${JSON.stringify(data.history)}`}

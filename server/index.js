@@ -59,6 +59,26 @@ server.put('/game/:id/active-chooser', (req, res, next) => {
   });
 });
 
+server.put('/game/:id/complete', (req, res, next) => {
+  console.log('PUT game complete');
+  connection.query('UPDATE games SET status=? where id=?', ['completed', req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
+server.put('/game/:id/final-round', (req, res, next) => {
+  console.log('PUT final round');
+  connection.query('UPDATE games SET status=? where id=?', ['final_round', req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
 server.get('/game/:id/participants', (req, res, next) => {
   console.log('GET game participants');
   connection.query('select * from participants where game_key=?', [req.params.id], (error, results, fields) => {
@@ -150,12 +170,12 @@ server.put('/game/:id/open-present/:pid', (req, res, next) => {
   });
 });
 
-server.put('/steal-present/:id', (req, res, next) => {
+server.put('/game/:id/steal-present/:pid', (req, res, next) => {
   console.log('PUT steal-present');
   let status = 'open';
-  const events = ['INSERT INTO game_history SET event=\'steal\', present_key=' + req.params.id];
+  const events = ['INSERT INTO game_history SET event=\'steal\', present_key=' + req.params.pid + ',game_key=' + req.params.id];
   if (req.body.lock) {
-    events.push(';INSERT INTO game_history SET event=\'steal\', present_key=' + req.params.id);
+    events.push(';INSERT INTO game_history SET event=\'lock\', present_key=' + req.params.pid + ',game_key=' + req.params.id);
     status = 'locked';
   }
 

@@ -1,6 +1,6 @@
 CREATE TABLE `game_history` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `event` enum('open','steal') DEFAULT NULL,
+  `event` enum('open','steal','lock') DEFAULT NULL,
   `game_key` int NOT NULL,
   `present_key` int DEFAULT NULL,
   PRIMARY KEY (`id`),
