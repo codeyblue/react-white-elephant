@@ -49,6 +49,16 @@ server.get('/games/:id', (req, res, next) => {
   });
 });
 
+server.put('/game/:id/active-chooser', (req, res, next) => {
+  console.log('PUT game active chooser');
+  connection.query('UPDATE games SET active_chooser=? where id=?', [req.body.participant, req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
 server.get('/game/:id/participants', (req, res, next) => {
   console.log('GET game participants');
   connection.query('select * from participants where game_key=?', [req.params.id], (error, results, fields) => {
@@ -64,10 +74,11 @@ server.put('/game/:id/participants/set-turns', (req, res, next) => {
   let { order } = req.body;
   order = order.map(turn => `(${turn.participant}, ${turn.turn}, -1, ${req.params.id})`);
   const queryString = `INSERT INTO participants (id, turn, user_key, game_key) VALUES ${order.join(',')} AS \`order\` ON DUPLICATE KEY UPDATE turn = \`order\`.turn`;
-  connection.query(queryString, (error, results, fields) => {
+  const getParticipants = `SELECT * FROM participants where game_key=${req.params.id} ORDER BY turn`;
+  connection.query(`${queryString};${getParticipants}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      res.send(results);
+      res.send(results[1]);
       next();
     });
 });
@@ -124,14 +135,17 @@ server.put('/presents/:id', (req, res, next) => {
   });
 });
 
-server.put('/open-present/:id', (req, res, next) => {
+server.put('/game/:id/open-present/:pid', (req, res, next) => {
   console.log('PUT open-present');
-  const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.params.id}`;
-  const updatePresent = `UPDATE presents SET status='open', holder=${req.body.user} where id=${req.params.id}`;
-  connection.query(`${updatePresent};${updateHistory}`, (error, results, fields) => {
+  const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.params.pid}, game_key=${req.params.id}`;
+  const updatePresent = `UPDATE presents SET status='open', holder=${req.body.user} where id=${req.params.pid}`;
+  const getPresentData = `SELECT * FROM presents where id=${req.params.pid}`;
+  const getHistory = `SELECT id, event FROM game_history where present_key=${req.params.pid}`;
+  connection.query(`${updatePresent};${updateHistory};${getPresentData};${getHistory}`, (error, results, fields) => {
     if (error) throw error;
     console.log(results);
-    res.send(results);
+    const data = {...results[2][0], history: results[3]};
+    res.send(data);
     next();
   });
 });

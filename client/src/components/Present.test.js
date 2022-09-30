@@ -34,7 +34,7 @@ test('renders an open present', () => {
   const present = screen.getByTestId('present');
   const openButton = screen.queryByRole('button', {name: 'Open'});
   const stealButton = screen.getByRole('button', {name: 'Steal'});
-  expect(present).toHaveTextContent('Present Holder: 2 Steal');
+  expect(present).toHaveTextContent('Present Holder: 2 Steal History: [{"event": "open"}]');
   expect(openButton).not.toBeInTheDocument();
   expect(stealButton).toBeInTheDocument();
 });

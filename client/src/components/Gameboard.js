@@ -1,16 +1,11 @@
-import Participant from './Participant';
-import Present from './Present';
+import PresentList from './PresentList';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-
-const mockGameData = require('../mockGameData.json');
-
+import ParticipantList from './ParticipantList';
 
 const Gameboard = () => {
   const {id} = useParams();
   const [game, setGame] = useState({});
-  const [participants, setParticipants] = useState([]);
-  const [presents, setPresents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -31,90 +26,11 @@ const Gameboard = () => {
     setIsLoading(false);
   }, [id]);
 
-  const fetchParticipants = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/participants`);
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response.json();
-      setParticipants(data.sort((a, b) => { return a.turn - b.turn }));
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
-  }, [id]);
-
-  const fetchPresents = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/presents`);
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response.json();
-
-      let tempPresents = [];
-      const uniquePresents = [...new Set(data.map(item => item.id))];
-      uniquePresents.forEach(id => {
-        const d = data.find(d => d.id === id);
-        const history = data.filter(h => h.id === id).map(h => { return { event: h.event }});
-        tempPresents.push({
-          id,
-          gifter: d.gifter,
-          status: d.status,
-          holder: d.holder,
-          history,
-          maxSteals: game.rule_maxstealsperpresent && history.length >= game.rule_maxstealsperpresent ?
-            true :
-            false
-        });
-      });
-
-      setPresents(tempPresents);
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
-  }, [game.rule_maxstealsperpresent, id]);
-
   useEffect(() => {
     fetchGame();
-    fetchParticipants();
-    fetchPresents();
-  }, [fetchGame, fetchParticipants, fetchPresents]);
+  }, [fetchGame]);
 
-  const allowGameReady = useCallback(() => {
-    if (participants.length > 1) {
-      if (presents.length !== participants.length) {
-        return false;
-      }
-
-      return participants.filter(participant => {
-        return presents.filter(present => present.gifter === participant.user_key).length != 1;
-      }).length === 0;
-    }
-
-    return false;
-  }, [participants, presents]);
-
-  const allowGameStart = useCallback(async () => {
-    if (!(await allowGameReady())) {
-      return false;
-    }
-
-    return participants.filter(participant => participant.checkedin === 0).length === 0;
-  }, [allowGameReady, participants]);
-
-  const setGameReady = useCallback(async () => {
-    if (!(await allowGameReady())) {
-      return;
-    }
+  const setGameReady = async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -125,57 +41,16 @@ const Gameboard = () => {
       if (!response.ok) {
         throw new Error('Something went wrong!');
       }
+
+      await response;
     } catch (error) {
       setError(error.message);
     }
     setIsLoading(false);
     await fetchGame();
-  }, [allowGameReady, fetchGame, id]);
+  };
 
-  const shuffleParticipants = useCallback(() => {
-    const ids = participants.map(participant => participant.id);
-
-    let currentIndex = ids.length;
-    let randomIndex;
-
-    while (currentIndex !== 0) {
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex--;
-      [ids[currentIndex], ids[randomIndex]] = [ids[randomIndex], ids[currentIndex]];
-    }
-
-    return ids.map((id, index) => {
-      return {
-        participant: id,
-        turn: index
-      };
-    });
-  }, [participants]);
-
-  const setParticipantTurns = useCallback(async () => {
-    const order = shuffleParticipants();
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/participants/set-turns`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order })
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
-    await fetchParticipants();
-  }, [shuffleParticipants, fetchParticipants, id, participants]);
-
-  const setGameStart = useCallback(async () => {
-    if (!(await allowGameStart())) {
-      return;
-    }
+  const postGameStart = async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -186,83 +61,38 @@ const Gameboard = () => {
       if (!response.ok) {
         throw new Error('Something went wrong!');
       }
+      await response;
     } catch (error) {
       setError(error.message);
     }
     setIsLoading(false);
-    await fetchGame();
-    await setParticipantTurns();
-  }, [allowGameStart, fetchGame, id, setParticipantTurns]);
-
-  const openPresent = async id => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/open-present/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: mockGameData.currentUser })
-      });
-
-      const data = await response.json();
-
-      setPresents(data);
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
-    await fetchPresents();
-  }
-
-  const stealPresent = async present => {
-    if (present.maxSteals) {
-      return;
-    }
-
-    const lock = present.history.length + 1 >= game.rule_maxstealsperpresent;
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/steal-present/${present.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: mockGameData.currentUser, to: mockGameData.nextUser, lock })
-      });
-
-      const data = await response.json();
-
-      setPresents(data);
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
-    await fetchPresents();
-  }
-
-  let participantContent = <p>No participants yet.</p>,
-    presentContent = <p>No presents yet.</p>;
+  };
   
-  if (participants.length > 0) {
-    const transformedParticipants =
-      participants.map(participant => <Participant key={participant.id} data={participant} />);
-    participantContent = <div key='Participant List'>{transformedParticipants}</div>
-  }
+  const putActiveChooser = async pID => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/active-chooser`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant: pID })
+      });
 
-  if (presents.length > 0) {
-    const transformedPresents = 
-      presents.map(present => 
-        <Present key={present.id} data={present} gameStatus={game.status} onPresentOpen={openPresent} onPresentSteal={stealPresent} />
-      );
-    presentContent = <div key='Present List'>{transformedPresents}</div>
-  }
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
 
-  if (error) {
-    presentContent = <p>{error}</p>;
-  }
+      const data = await response.json();
+      setGame({...game, active_chooser: pID})
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
+  };
 
-  if (isLoading) {
-    presentContent = <p>Loading...</p>;
+  const setGameStart = async () => {
+    await postGameStart();
+    await fetchGame();
   }
 
   return (
@@ -274,8 +104,22 @@ const Gameboard = () => {
         game.status === 'ready' &&
         <button onClick={setGameStart}>Start Game</button>
       }
-      {participantContent}
-      {presentContent}
+      {isLoading && <p>Loading...</p>}
+      {error && <p>Error</p>}
+      {!isLoading && <>
+        <ParticipantList
+          gameId={id}
+          activeChooser={game.active_chooser}
+          putActiveChooser={putActiveChooser}
+          gameStatus={game.status}
+          />
+        <PresentList
+          gameId={id}
+          maxPresentSteal={game.rule_maxstealsperpresent}
+          gameStatus={game.status}
+          />
+        </>
+      }
     </div>
   );
 }
