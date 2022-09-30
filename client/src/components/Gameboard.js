@@ -121,32 +121,56 @@ const Gameboard = () => {
       }
 
       const data = await response;
-    } catch (erro) {
+    } catch (error) {
       setError(error.message);
     }
     await fetchGame();
   }
 
-  const pickNextChooser = () => {
-    let currentIndex = participants.findIndex(p => p.id === game.active_chooser);
-    let nextIndex = 0;
+  const incrementRound = async (round) => {
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/increment-round`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ round })
+      });
 
-    if (currentIndex + 1 < participants.length) {
-      nextIndex = currentIndex + 1;
-    } else {
-      if (game.status === 'final_round') {
-        setGameComplete();
-        putActiveChooser(null);
-        return;
-      } else {
-        setFinalRound();
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
       }
-      console.log(game);
+
+      const data = await response;
+    } catch (error) {
+      setError(error.message);
+    }
+    await fetchGame();
+  };
+
+  const pickNextChooser = (action, previousHolder=null) => {
+    let currentIndex = 0;
+    let nextIndex = 0;
+    if (action === 'open') {
+      currentIndex = participants.findIndex(p => p.turn === game.round);
+
+      if (currentIndex + 1 < participants.length) {
+        nextIndex = currentIndex + 1;
+      } else {
+        if (game.status === 'final_round') {
+          setGameComplete();
+          putActiveChooser(null);
+          return;
+        } else {
+          setFinalRound();
+        }
+      }
+      incrementRound(nextIndex);
+    } else if (action === 'steal') {
+      currentIndex = participants.findIndex(p => p.id === game.active_chooser);
+      nextIndex = participants.findIndex(p => p.user_key === previousHolder);
     }
 
     putActiveChooser(participants[nextIndex].id);
-    console.log(currentIndex);
-    console.log(nextIndex);
   }
 
   const setGameStart = async () => {
@@ -171,6 +195,7 @@ const Gameboard = () => {
           maxPresentSteal={game.rule_maxstealsperpresent}
           gameStatus={game.status}
           pickNextChooser={pickNextChooser}
+          activeChooser={participants.find(p => p.id === game.active_chooser)}
           />
         <ParticipantList
           gameId={id}

@@ -1,10 +1,8 @@
 import { useState } from "react";
 import './Present.css';
 
-const mockGameData = require('../mockGameData.json');
-
 const Present = props => {
-  const { gameId, gameStatus, maxPresentSteal } = props;
+  const { gameId, gameStatus, maxPresentSteal, currentUser } = props;
   const [data, setData] = useState(props.data);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,7 +14,7 @@ const Present = props => {
       const response = await fetch(`http://localhost:8080/game/${gameId}/open-present/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: mockGameData.currentUser })
+        body: JSON.stringify({ user: currentUser.user_key })
       });
 
       const data = await response.json();
@@ -24,7 +22,7 @@ const Present = props => {
     } catch (error) {
       setError(error.message);
     }
-    props.pickNextChooser();
+    props.pickNextChooser('open');
     setIsLoading(false);
   };
 
@@ -33,6 +31,7 @@ const Present = props => {
       return;
     }
 
+    const previousHolder = present.holder;
     const lock = present.history.length + 1 >= maxPresentSteal;
 
     setIsLoading(true);
@@ -42,7 +41,7 @@ const Present = props => {
       const response = await fetch(`http://localhost:8080/game/${gameId}/steal-present/${present.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: mockGameData.currentUser, to: mockGameData.nextUser, lock })
+        body: JSON.stringify({ from: previousHolder, to: currentUser.user_key, lock })
       });
 
       const data = await response.json();
@@ -50,7 +49,7 @@ const Present = props => {
     } catch (error) {
       setError(error.message);
     }
-    props.pickNextChooser();
+    props.pickNextChooser('steal', previousHolder);
     setIsLoading(false);
   }
 

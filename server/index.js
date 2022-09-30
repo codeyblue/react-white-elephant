@@ -79,6 +79,16 @@ server.put('/game/:id/final-round', (req, res, next) => {
   });
 });
 
+server.put('/game/:id/increment-round', (req, res, next) => {
+  console.log('PUT increment round');
+  connection.query('UPDATE games SET round=? where id=?', [req.body.round, req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
+
 server.get('/game/:id/participants', (req, res, next) => {
   console.log('GET game participants');
   connection.query('select * from participants where game_key=?', [req.params.id], (error, results, fields) => {
@@ -180,14 +190,14 @@ server.put('/game/:id/steal-present/:pid', (req, res, next) => {
   }
 
   console.log('Update present');
-  connection.query('UPDATE presents SET holder=?, status=? where id=?', [req.body.to, status, req.params.id], (error, results, fields) => {
+  connection.query('UPDATE presents SET holder=?, status=? where id=?', [req.body.to, status, req.params.pid], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
 
     console.log('Update history');
     connection.query(events.join(''), (error, results, fields) => {
       if (error) {
-        connection.query('UPDATE presents SET holder=?, status=? where id=?', [req.body.from, status, req.params.id], (error, results, fields) => {
+        connection.query('UPDATE presents SET holder=?, status=? where id=?', [req.body.from, status, req.params.pid], (error, results, fields) => {
           if (error) {
             throw error;
           }
@@ -197,7 +207,7 @@ server.put('/game/:id/steal-present/:pid', (req, res, next) => {
       console.log(results);
 
       console.log('Return history')
-      connection.query('SELECT * from game_history where present_key=?', [req.params.id], (error, results, fields) => {
+      connection.query('SELECT * from game_history where present_key=?', [req.params.pid], (error, results, fields) => {
         if (error) throw error;
         console.log(results);
         res.send(results);

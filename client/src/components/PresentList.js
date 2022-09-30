@@ -59,6 +59,7 @@ const PresentList = props => {
           maxPresentSteal={maxPresentSteal}
           gameId={gameId}
           pickNextChooser={props.pickNextChooser}
+          currentUser={props.activeChooser}
           />
       );
     presentContent = <div key='Present List'>{transformedPresents}</div>
