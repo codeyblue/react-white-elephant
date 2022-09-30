@@ -96,7 +96,7 @@ const Gameboard = () => {
   }
 
   return (
-    <div className="Gameboard">
+    <div className="Gameboard" style={{ display: 'flex' }}>
       { game.status === 'setup' &&
         <button onClick={setGameReady}>Ready</button>
       }
@@ -107,15 +107,15 @@ const Gameboard = () => {
       {isLoading && <p>Loading...</p>}
       {error && <p>Error</p>}
       {!isLoading && <>
+        <PresentList
+          gameId={id}
+          maxPresentSteal={game.rule_maxstealsperpresent}
+          gameStatus={game.status}
+          />
         <ParticipantList
           gameId={id}
           activeChooser={game.active_chooser}
           putActiveChooser={putActiveChooser}
-          gameStatus={game.status}
-          />
-        <PresentList
-          gameId={id}
-          maxPresentSteal={game.rule_maxstealsperpresent}
           gameStatus={game.status}
           />
         </>

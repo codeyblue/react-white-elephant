@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Present from './Present';
+import './Present.css';
 
 const PresentList = props => {
   const { gameId, maxPresentSteal, gameStatus } = props;
@@ -65,7 +66,7 @@ const PresentList = props => {
   }
 
   return (
-    <div className='Present List'>
+    <div className='present-list'>
       {presentContent}
     </div>
   );

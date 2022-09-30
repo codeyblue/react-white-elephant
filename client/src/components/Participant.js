@@ -1,14 +1,12 @@
+import './Participant.css';
+
 const Participant = props => {
   const { data, activeChooser } = props;
-  const backgroundColor = activeChooser ? 'yellow' : 'pink';
+  const c = activeChooser ? 'active-participant' : 'participant';
   return (
     <>
-      <div key={data.id} style={{ backgroundColor }}>
-        <p>ID: {data.id}</p>
+      <div key={data.id} className={c}>
         <p>USER: {data.user_key}</p>
-        <p>GAME: {data.game_key}</p>
-        <p>TURN: {data.turn}</p>
-        <p>ACTIVE: {`${activeChooser}`}</p>
         <p>PRESENT: {data.current_present_key}</p>
       </div>
     </>

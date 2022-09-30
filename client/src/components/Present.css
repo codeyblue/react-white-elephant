@@ -1,0 +1,14 @@
+.present {
+  background-color: grey;
+  width: 150px;
+  height: 150px;
+  border: 5px solid black;
+  display: inline-block;
+  margin: 2px;
+  overflow: hidden;
+}
+
+.present-list {
+  display: inline-flex;
+  width: 75vw;
+}

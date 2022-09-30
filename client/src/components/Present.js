@@ -1,4 +1,5 @@
 import { useState } from "react";
+import './Present.css';
 
 const mockGameData = require('../mockGameData.json');
 
@@ -52,7 +53,7 @@ const Present = props => {
   }
 
   return (
-    <div data-testid='present' style={{width: '150px', height: '150px', backgroundColor: 'grey'}}>
+    <div className='present'>
       {isLoading && <p>Loading...</p>}
       {error && <p>Error</p>}
       {!isLoading && (<>
