@@ -24,13 +24,14 @@ const PresentList = props => {
       uniquePresents.forEach(id => {
         const d = data.find(d => d.id === id);
         const history = data.filter(h => h.id === id).map(h => { return { event: h.event }});
+        const steals = history.filter(h => h.event === 'steal');
         tempPresents.push({
           id,
           gifter: d.gifter,
           status: d.status,
           holder: d.holder,
           history,
-          maxSteals: maxPresentSteal && history.length >= maxPresentSteal ?
+          maxSteals: maxPresentSteal && steals.length >= maxPresentSteal ?
             true :
             false
         });

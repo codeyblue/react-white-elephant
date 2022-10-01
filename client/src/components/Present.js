@@ -17,12 +17,16 @@ const Present = props => {
         body: JSON.stringify({ user: currentUser.user_key })
       });
 
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
       const data = await response.json();
       setData(data);
     } catch (error) {
       setError(error.message);
     }
-    props.pickNextChooser('open');
+    await props.pickNextChooser('open');
     setIsLoading(false);
   };
 
@@ -44,14 +48,46 @@ const Present = props => {
         body: JSON.stringify({ from: previousHolder, to: currentUser.user_key, lock })
       });
 
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
       const data = await response.json();
       setData(data);
     } catch (error) {
       setError(error.message);
     }
-    props.pickNextChooser('steal', previousHolder);
+    await props.pickNextChooser('steal', previousHolder);
     setIsLoading(false);
   }
+
+  const swapPresents = async present => {
+    setError(null);
+    const currentPresent = currentUser.current_present_key;
+
+    console.log({from: { user: currentUser.user_key, present: currentUser.current_present_key },
+      to: { user: present.holder, present: present.id }})
+
+    try {
+      const response = await fetch(`http://localhost:8080/game/${gameId}/swap-presents`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: { user: currentUser.user_key, present: currentUser.current_present_key },
+          to: { user: present.holder, present: present.id }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (error) {
+      setError(error);
+    }
+    await props.pickNextChooser('steal', present.holder);
+  };
 
   return (
     <div className='present'>
@@ -67,13 +103,18 @@ const Present = props => {
           <button onClick={() => openPresent(data.id)}>Open</button>
         }
         {
-          (gameStatus === 'inprogress' || gameStatus === 'final_round') &&
+          gameStatus === 'inprogress' &&
           data.status === 'open' &&
           <>
             History: {`${JSON.stringify(data.history)}`}
             <button onClick={() => stealPresent(data)}>Steal</button>
           </>
         } <br />
+        {
+          gameStatus === 'final_round' &&
+          data.status === 'open' &&
+          <button onClick={() => swapPresents(data)}>Swap</button>
+        }
         Max Steals: {`${data.maxSteals}`}
       </>)}
     </div>

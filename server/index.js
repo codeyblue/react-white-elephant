@@ -169,13 +169,29 @@ server.put('/game/:id/open-present/:pid', (req, res, next) => {
   console.log('PUT open-present');
   const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.params.pid}, game_key=${req.params.id}`;
   const updatePresent = `UPDATE presents SET status='open', holder=${req.body.user} where id=${req.params.pid}`;
+  const updateParticipant = `UPDATE participants SET current_present_key=${req.params.pid} where user_key=${req.body.user}`;
   const getPresentData = `SELECT * FROM presents where id=${req.params.pid}`;
   const getHistory = `SELECT id, event FROM game_history where present_key=${req.params.pid}`;
-  connection.query(`${updatePresent};${updateHistory};${getPresentData};${getHistory}`, (error, results, fields) => {
+  connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getHistory}`, (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     const data = {...results[2][0], history: results[3]};
     res.send(data);
+    next();
+  });
+});
+
+server.put('/game/:id/reset', (req, res, next) => {
+  console.log('PUT reset game')
+  const updateHistory = `DELETE FROM game_history WHERE game_key=${req.params.id}`;
+  const updatePresents = `UPDATE presents SET status='wrapped', holder=null where game_key=${req.params.id}`;
+  const updateParticipants = `UPDATE participants SET current_present_key=null where game_key=${req.params.id}`;
+  const updateGame = `UPDATE games SET status='setup', active_chooser=null, round=0 where id=${req.params.id}`;
+
+  connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame}`, (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send();
     next();
   });
 });
@@ -214,5 +230,45 @@ server.put('/game/:id/steal-present/:pid', (req, res, next) => {
         next();
       });
     });
+  });
+});
+
+server.put('/game/:id/swap-presents', (req, res, next) => {
+  console.log('PUT swap-presents');
+  const events = [
+    'INSERT INTO game_history (event, present_key, game_key) VALUES (\'swap\',' + req.body.from.present + ',' + req.params.id + ')',
+    ',(\'swap\',' + req.body.to.present + ',' + req.params.id + ')',
+    ',(\'lock\',' + req.body.to.present + ',' + req.params.id + ')'
+  ];
+
+  const presents = [
+    'UPDATE presents SET holder=' + req.body.to.user + ' where id=' + req.body.from.present,
+    'UPDATE presents SET holder=' + req.body.from.user + ',status=\'locked\' where id=' + req.body.to.present
+  ];
+
+  const participants = [
+    'UPDATE participants SET current_present_key=' + req.body.from.present + ' where user_key=' + req.body.to.user,
+    'UPDATE participants SET current_present_key=' + req.body.to.present + ' where user_key=' + req.body.from.user
+  ]
+  console.log(participants.join(';'))
+
+  console.log('Update presents');
+  connection.query(presents.join(';'), (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+
+    console.log('Update participants');
+    connection.query(participants.join(';'), (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+    });
+
+    console.log('Update history');
+    connection.query(events.join(''), (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+    });
+    res.send();
+    next();
   });
 });

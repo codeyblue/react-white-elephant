@@ -178,6 +178,26 @@ const Gameboard = () => {
     await fetchGame();
   }
 
+  const resetGame = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/reset`, {
+        method: 'PUT'
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (error) {
+      setError(error);
+    }
+
+    await fetchGame();
+  };
+
   return (
     <div className="Gameboard" style={{ display: 'flex' }}>
       { game.status === 'setup' &&
@@ -207,6 +227,7 @@ const Gameboard = () => {
           />
         </>
       }
+      <button onClick={resetGame}>Reset Game</button>
     </div>
   );
 }

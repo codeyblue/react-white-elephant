@@ -89,7 +89,7 @@ const ParticipantList = props => {
 
   return (
     <div className='Participant List'>
-      {gameStatus !== 'inprogress' && <button onClick={setParticipantTurns}>Shuffle</button>}
+      {(gameStatus !== 'inprogress' && gameStatus !== 'final_round') && <button onClick={setParticipantTurns}>Shuffle</button>}
       {participantContent}
     </div>
   );
