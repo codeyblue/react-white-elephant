@@ -196,6 +196,41 @@ server.put('/game/:id/reset', (req, res, next) => {
   });
 });
 
+server.put('/game/:id/restart', (req, res, next) => {
+  console.log('PUT restart game')
+  const updateHistory = `DELETE FROM game_history WHERE game_key=${req.params.id}`;
+  const updatePresents = `UPDATE presents SET status='wrapped', holder=null where game_key=${req.params.id}`;
+  const updateParticipants = `UPDATE participants SET current_present_key=null where game_key=${req.params.id}`;
+  const updateGame = `UPDATE games SET status='ready', active_chooser=${req.body.firstChooser}, round=0 where id=${req.params.id}`;
+
+  connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame}`, (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send();
+    next();
+  });
+});
+
+server.put('/game/:id/pause', (req, res, next) => {
+  console.log('PUT pause game')
+  connection.query('UPDATE games SET status=? where id=?', ['paused', req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send();
+    next();
+  });
+});
+
+server.put('/game/:id/continue', (req, res, next) => {
+  console.log('PUT continue game')
+  connection.query('UPDATE games SET status=? where id=?', ['inprogress', req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send();
+    next();
+  });
+});
+
 server.put('/game/:id/steal-present/:pid', (req, res, next) => {
   console.log('PUT steal-present');
   let status = 'open';

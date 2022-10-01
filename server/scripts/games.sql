@@ -1,7 +1,7 @@
 CREATE TABLE `games` (
   `id` int AUTO_INCREMENT,
   `administrator` int NOT NULL,
-  `status` enum('setup','ready','inprogress','final_round','completed') DEFAULT 'setup',
+  `status` enum('setup','ready','inprogress','paused','final_round','complete') DEFAULT 'setup',
   `round` int DEFAULT 0,
   `active_chooser` int DEFAULT NULL,
   `rule_maxstealsperpresent` int DEFAULT 3,

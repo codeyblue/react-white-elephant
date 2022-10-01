@@ -207,6 +207,68 @@ const Gameboard = () => {
     await fetchGame();
   };
 
+  const restartGame = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/restart`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstChooser: participants[0].id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (error) {
+      setError(error);
+    }
+
+    await fetchGame();
+  };
+
+  const pauseGame = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/pause`, {
+        method: 'PUT'
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (error) {
+      setError(error);
+    }
+
+    await fetchGame();
+  };
+
+  const continueGame = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/continue`, {
+        method: 'PUT'
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      const data = await response;
+    } catch (error) {
+      setError(error);
+    }
+
+    await fetchGame();
+  };
+
   return (
     <div className="Gameboard" style={{ display: 'flex' }}>
       { game.status === 'setup' &&
@@ -241,14 +303,18 @@ const Gameboard = () => {
       <div>
         {
           (game.status === 'inprogress' || game.status === 'final_round' || game.status === 'completed') &&
-          <button onClick={resetGame}>Restart Game</button>
+          <button onClick={restartGame}>Restart Game</button>
         }
         {
           (game.status === 'inprogress' || game.status === 'final_round') &&
           <>
-          <button onClick={resetGame}>Reset Game</button>
-          <button>Pause Game</button>
-          <button>Stop Game</button></>
+            <button onClick={resetGame}>Reset Game</button>
+            <button onClick={pauseGame}>Pause Game</button>
+          </>
+        }
+        {
+          game.status === 'paused' &&
+          <button onClick={continueGame}>Continue Game</button>
         }
         {
           game.status === 'final_round' &&
