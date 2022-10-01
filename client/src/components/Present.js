@@ -63,11 +63,6 @@ const Present = props => {
 
   const swapPresents = async present => {
     setError(null);
-    const currentPresent = currentUser.current_present_key;
-
-    console.log({from: { user: currentUser.user_key, present: currentUser.current_present_key },
-      to: { user: present.holder, present: present.id }})
-
     try {
       const response = await fetch(`http://localhost:8080/game/${gameId}/swap-presents`, {
         method: 'PUT',
@@ -103,6 +98,8 @@ const Present = props => {
           <button onClick={() => openPresent(data.id)}>Open</button>
         }
         {
+          currentUser &&
+          data.holder !== currentUser.user_key &&
           gameStatus === 'inprogress' &&
           data.status === 'open' &&
           <>
@@ -111,6 +108,8 @@ const Present = props => {
           </>
         } <br />
         {
+          currentUser &&
+          data.holder !== currentUser.user_key &&
           gameStatus === 'final_round' &&
           data.status === 'open' &&
           <button onClick={() => swapPresents(data)}>Swap</button>

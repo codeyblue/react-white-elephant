@@ -7,6 +7,7 @@ const Gameboard = () => {
   const {id} = useParams();
   const [game, setGame] = useState({});
   const [participants, setParticipants] = useState([]);
+  const [presents, setPresents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -84,7 +85,7 @@ const Gameboard = () => {
       }
 
       const data = await response.json();
-      setGame({...game, active_chooser: pID})
+      await fetchGame();
     } catch (error) {
       setError(error.message);
     }
@@ -147,7 +148,7 @@ const Gameboard = () => {
     await fetchGame();
   };
 
-  const pickNextChooser = (action, previousHolder=null) => {
+  const pickNextChooser = async (action, previousHolder=null) => {
     let currentIndex = 0;
     let nextIndex = 0;
     if (action === 'open') {
@@ -157,20 +158,28 @@ const Gameboard = () => {
         nextIndex = currentIndex + 1;
       } else {
         if (game.status === 'final_round') {
-          setGameComplete();
-          putActiveChooser(null);
+          await setGameComplete();
+          await putActiveChooser(null);
           return;
         } else {
-          setFinalRound();
+          await setFinalRound();
         }
       }
       incrementRound(nextIndex);
     } else if (action === 'steal') {
       currentIndex = participants.findIndex(p => p.id === game.active_chooser);
       nextIndex = participants.findIndex(p => p.user_key === previousHolder);
+      if (game.status === 'final_round') {
+        const nextUser = participants[nextIndex];
+        if (presents.filter(p => p.holder !== nextUser.user_key && p.status !== 'locked').length <= 1) {
+          console.log('final')
+          await setGameComplete();
+          return;
+        }
+      }
     }
 
-    putActiveChooser(participants[nextIndex].id);
+    await putActiveChooser(participants[nextIndex].id);
   }
 
   const setGameStart = async () => {
@@ -216,6 +225,8 @@ const Gameboard = () => {
           gameStatus={game.status}
           pickNextChooser={pickNextChooser}
           activeChooser={participants.find(p => p.id === game.active_chooser)}
+          presents={presents}
+          setPresents={setPresents}
           />
         <ParticipantList
           gameId={id}
@@ -227,7 +238,23 @@ const Gameboard = () => {
           />
         </>
       }
-      <button onClick={resetGame}>Reset Game</button>
+      <div>
+        {
+          (game.status === 'inprogress' || game.status === 'final_round' || game.status === 'completed') &&
+          <button onClick={resetGame}>Restart Game</button>
+        }
+        {
+          (game.status === 'inprogress' || game.status === 'final_round') &&
+          <>
+          <button onClick={resetGame}>Reset Game</button>
+          <button>Pause Game</button>
+          <button>Stop Game</button></>
+        }
+        {
+          game.status === 'final_round' &&
+          <button onClick={setGameComplete}>Complete Game</button>
+        }
+      </div>
     </div>
   );
 }

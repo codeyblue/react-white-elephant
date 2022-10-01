@@ -3,8 +3,7 @@ import Present from './Present';
 import './Present.css';
 
 const PresentList = props => {
-  const { gameId, maxPresentSteal, gameStatus } = props;
-  const [presents, setPresents] = useState([]);
+  const { gameId, maxPresentSteal, gameStatus, presents, setPresents } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
