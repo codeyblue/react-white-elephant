@@ -4,6 +4,7 @@ import reportWebVitals from './reportWebVitals';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import App from './App';
 import Gameboard from './components/Gameboard';
+import SocketTest from './SocketTest';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -12,6 +13,7 @@ root.render(
       <Routes>
         <Route path='/' element={<App />} />
         <Route path='/game/:id' element={<Gameboard />} />
+        <Route path='/socket' element={<SocketTest />} />
       </Routes>
     </Router>
   </React.StrictMode>
