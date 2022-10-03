@@ -51,7 +51,7 @@ server.get('/games/:id', (req, res, next) => {
 
 server.put('/game/:id/active-chooser', (req, res, next) => {
   console.log('PUT game active chooser');
-  connection.query('UPDATE games SET active_chooser=? where id=?', [req.body.participant, req.params.id], (error, results, fields) => {
+  connection.query('UPDATE games SET active_participant=? where id=?', [req.body.participant, req.params.id], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     res.send(results);
@@ -186,7 +186,7 @@ server.put('/game/:id/reset', (req, res, next) => {
   const updateHistory = `DELETE FROM game_history WHERE game_key=${req.params.id}`;
   const updatePresents = `UPDATE presents SET status='wrapped', holder=null where game_key=${req.params.id}`;
   const updateParticipants = `UPDATE participants SET current_present_key=null where game_key=${req.params.id}`;
-  const updateGame = `UPDATE games SET status='setup', active_chooser=null, round=0 where id=${req.params.id}`;
+  const updateGame = `UPDATE games SET status='setup', active_participant=null, round=0 where id=${req.params.id}`;
 
   connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame}`, (error, results, fields) => {
     if (error) throw error;
@@ -201,7 +201,7 @@ server.put('/game/:id/restart', (req, res, next) => {
   const updateHistory = `DELETE FROM game_history WHERE game_key=${req.params.id}`;
   const updatePresents = `UPDATE presents SET status='wrapped', holder=null where game_key=${req.params.id}`;
   const updateParticipants = `UPDATE participants SET current_present_key=null where game_key=${req.params.id}`;
-  const updateGame = `UPDATE games SET status='ready', active_chooser=${req.body.firstChooser}, round=0 where id=${req.params.id}`;
+  const updateGame = `UPDATE games SET status='ready', active_participant=${req.body.firstChooser}, round=0 where id=${req.params.id}`;
 
   connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame}`, (error, results, fields) => {
     if (error) throw error;

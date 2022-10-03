@@ -2,17 +2,17 @@ import { useState } from "react";
 import './Present.css';
 
 const Present = props => {
-  const { gameId, gameStatus, maxPresentSteal, currentUser, socket } = props;
-  const [data, setData] = useState(props.data);
+  const { gameId, gameStatus, maxPresentSteal, currentUser, socket, pickNextParticipant, data, lastStolenPresent } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const openPresent = async id => {
+  const openPresent = id => {
     console.log('Opening Present...');
     socket.emit('open-present', { game: gameId, present: id, user: currentUser.user_key });
+    pickNextParticipant('open');
   };
 
-  const stealPresent = async present => {
+  const stealPresent = present => {
     console.log('Stealing Present...');
     if (present.maxSteals) {
       return;
@@ -22,15 +22,17 @@ const Present = props => {
 
     const previousHolder = present.holder;
     socket.emit('steal-present', { game: gameId, present: present.id, from: previousHolder, to: currentUser.user_key, lock });
+    pickNextParticipant('steal', previousHolder);
   }
 
-  const swapPresents = async present => {
+  const swapPresents = present => {
     console.log('Swapping Presents...');
     socket.emit('swap-presents', {
       game: gameId,
-      swaper: { user: currentUser.user_key, present: currentUser.present_key },
+      swaper: { user: currentUser.user_key, present: currentUser.current_present_key },
       swapee: { user: present.holder, present: present.id }
     });
+    pickNextParticipant('steal', present.holder);
   };
 
   return (
@@ -51,7 +53,10 @@ const Present = props => {
           data.holder !== currentUser.user_key &&
           gameStatus === 'inprogress' &&
           data.status === 'open' &&
+          lastStolenPresent !== data.id &&
+          !data.maxSteals &&
           <>
+            {console.log(data)}
             History: {`${JSON.stringify(data.history)}`}
             <button onClick={() => stealPresent(data)}>Steal</button>
           </>

@@ -1,8 +1,8 @@
 import './Participant.css';
 
 const Participant = props => {
-  const { data, activeChooser } = props;
-  const c = activeChooser ? 'active-participant' : 'participant';
+  const { data, activeParticipant } = props;
+  const c = activeParticipant ? 'active-participant' : 'participant';
   return (
     <>
       <div key={data.id} className={c}>

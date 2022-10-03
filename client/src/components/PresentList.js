@@ -3,7 +3,7 @@ import Present from './Present';
 import './Present.css';
 
 const PresentList = props => {
-  const { gameId, maxPresentSteal, gameStatus, presents, setPresents } = props;
+  const { gameId, maxPresentSteal, gameStatus, presents, setPresents, socket, pickNextParticipant, lastStolenPresent } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -18,30 +18,12 @@ const PresentList = props => {
 
       const data = await response.json();
 
-      let tempPresents = [];
-      const uniquePresents = [...new Set(data.map(item => item.id))];
-      uniquePresents.forEach(id => {
-        const d = data.find(d => d.id === id);
-        const history = data.filter(h => h.id === id).map(h => { return { event: h.event }});
-        const steals = history.filter(h => h.event === 'steal');
-        tempPresents.push({
-          id,
-          gifter: d.gifter,
-          status: d.status,
-          holder: d.holder,
-          history,
-          maxSteals: maxPresentSteal && steals.length >= maxPresentSteal ?
-            true :
-            false
-        });
-      });
-
-      setPresents(tempPresents);
+      setPresents(data);
     } catch (error) {
       setError(error.message);
     }
     setIsLoading(false);
-  }, [maxPresentSteal, gameId]);
+  }, [gameId, setPresents]);
 
   useEffect(() => {
     fetchPresents();
@@ -53,13 +35,15 @@ const PresentList = props => {
     const transformedPresents = 
       presents.map(present => 
         <Present
-          key={present.id}
+          key={`present-${present.id}`}
           data={present}
           gameStatus={gameStatus}
           maxPresentSteal={maxPresentSteal}
           gameId={gameId}
-          pickNextChooser={props.pickNextChooser}
-          currentUser={props.activeChooser}
+          currentUser={props.activeParticipant}
+          socket={socket}
+          pickNextParticipant={pickNextParticipant}
+          lastStolenPresent={lastStolenPresent}
           />
       );
     presentContent = <div key='Present List'>{transformedPresents}</div>

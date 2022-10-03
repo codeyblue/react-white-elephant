@@ -1,9 +1,9 @@
-import PresentList from './PresentList';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ParticipantList from './ParticipantList';
+import PresentList from './PresentList';
 
-const Gameboard = () => {
+const Gameboard = ({ socket }) => {
   const {id} = useParams();
   const [game, setGame] = useState({});
   const [participants, setParticipants] = useState([]);
@@ -30,127 +30,129 @@ const Gameboard = () => {
 
   useEffect(() => {
     fetchGame();
-  }, [fetchGame]);
 
-  const setGameReady = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/ready`, {
-        method: 'POST'
-      });
+    socket.on('active-participant-set', req => {
+      console.log('active-participant-set');
+      console.log(req);
+      setGame(req);
+    });
 
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
+    socket.on('final-round-set', req => {
+      console.log('final-round-set');
+      console.log(req);
+      setGame(req);
+    });
 
-      await response;
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
-    await fetchGame();
+    socket.on('game-complete', req => {
+      console.log('game-complete');
+      console.log(req);
+      setGame(req);
+    });
+
+    socket.on('game-ready', req => {
+      console.log('game-ready');
+      console.log(req);
+      setGame(req);
+    });
+
+    socket.on('game-reset', req => {
+      console.log('game-reset');
+      console.log(req);
+      setGame(req.game);
+      setParticipants(req.participants);
+      setPresents(req.presents);
+    });
+
+    socket.on('game-restarted', req => {
+      console.log('game-restarted');
+      console.log(req);
+      setGame(req.game);
+      setParticipants(req.participants);
+      setPresents(req.presents);
+    });
+
+    socket.on('game-started', req => {
+      console.log('game-started')
+      console.log(req);
+      setGame(req.game);
+      setParticipants(req.participants);
+    });
+
+    socket.on('present-opened', req => {
+      console.log('present-opened')
+      console.log(req);
+      setPresents(req.presents);
+      setParticipants(req.participants);
+    });
+
+    socket.on('present-stolen', req => {
+      console.log('present-stolen');
+      console.log(req);
+      setPresents(req.presents);
+      setParticipants(req.participants);
+      setGame(req.game);
+    });
+
+    socket.on('presents-swapped', req => {
+      console.log('presents-swapped');
+      console.log(req);
+      setPresents(req.presents);
+      setParticipants(req.participants);
+      setGame(req.game);
+    });
+  }, [fetchGame, socket]);
+
+  const setGameReady = () => {
+    console.log('Setting game to "ready"');
+    socket.emit('set-game-ready', {game: id});
   };
 
-  const postGameStart = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/start`, {
-        method: 'POST'
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-      await response;
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
+  const setGameStart = () => {
+    console.log('Setting game to "start"');
+    const order = shuffleParticipants();
+    socket.emit('set-game-start', {game: id, order});
   };
   
-  const putActiveChooser = async pID => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/active-chooser`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participant: pID })
-      });
-
-      if(!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response.json();
-      await fetchGame();
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);
+  const setActiveParticipant = (pID, incrementRound) => {
+    console.log('Setting active participant');
+    socket.emit('set-active-participant', {game: id, participant: pID, incrementRound});
   };
 
-  const setFinalRound = async () => {
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/final-round`, {
-        method: 'PUT'
-      });
-
-      if(!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response;
-    } catch (error) {
-      setError(error.message);
-    }
-    await fetchGame();
+  const setFinalRound = () => {
+    console.log('Setting final round...');
+    socket.emit('set-final-round', {game: id});
   }
 
-  const setGameComplete = async () => {
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/complete`, {
-        method: 'PUT'
-      });
-
-      if(!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response;
-    } catch (error) {
-      setError(error.message);
-    }
-    await fetchGame();
+  const setGameComplete = () => {
+    console.log('Setting game to complete...');
+    socket.emit('set-game-complete', {game: id});
   }
 
-  const incrementRound = async (round) => {
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/increment-round`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ round })
-      });
+  const shuffleParticipants = () => {
+    const ids = participants.map(participant => participant.id);
 
-      if(!response.ok) {
-        throw new Error('Something went wrong!');
-      }
+    let currentIndex = ids.length;
+    let randomIndex;
 
-      const data = await response;
-    } catch (error) {
-      setError(error.message);
+    while (currentIndex !== 0) {
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      [ids[currentIndex], ids[randomIndex]] = [ids[randomIndex], ids[currentIndex]];
     }
-    await fetchGame();
+
+    return ids.map((id, index) => {
+      return {
+        participant: id,
+        turn: index,
+        user_key: participants.find(p => p.id === id).user_key
+      };
+    });
   };
 
-  const pickNextChooser = async (action, previousHolder=null) => {
+  const pickNextParticipant = (action, previousHolder=null) => {
     let currentIndex = 0;
     let nextIndex = 0;
+    let incrementRound = false;
     if (action === 'open') {
       currentIndex = participants.findIndex(p => p.turn === game.round);
 
@@ -158,115 +160,37 @@ const Gameboard = () => {
         nextIndex = currentIndex + 1;
       } else {
         if (game.status === 'final_round') {
-          await setGameComplete();
-          await putActiveChooser(null);
+          setGameComplete();
           return;
         } else {
-          await setFinalRound();
+          setFinalRound();
         }
       }
-      incrementRound(nextIndex);
+      incrementRound = true;
     } else if (action === 'steal') {
-      currentIndex = participants.findIndex(p => p.id === game.active_chooser);
+      currentIndex = participants.findIndex(p => p.id === game.active_participant);
       nextIndex = participants.findIndex(p => p.user_key === previousHolder);
       if (game.status === 'final_round') {
         const nextUser = participants[nextIndex];
         if (presents.filter(p => p.holder !== nextUser.user_key && p.status !== 'locked').length <= 1) {
           console.log('final')
-          await setGameComplete();
+          setGameComplete();
           return;
         }
       }
     }
 
-    await putActiveChooser(participants[nextIndex].id);
+    setActiveParticipant(participants[nextIndex].id, incrementRound);
   }
 
-  const setGameStart = async () => {
-    await postGameStart();
-    await fetchGame();
-  }
-
-  const resetGame = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/reset`, {
-        method: 'PUT'
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response;
-    } catch (error) {
-      setError(error);
-    }
-
-    await fetchGame();
+  const resetGame = () => {
+    console.log('Resetting game');
+    socket.emit('reset-game', {game: id});
   };
 
-  const restartGame = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/restart`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstChooser: participants[0].id })
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response;
-    } catch (error) {
-      setError(error);
-    }
-
-    await fetchGame();
-  };
-
-  const pauseGame = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/pause`, {
-        method: 'PUT'
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response;
-    } catch (error) {
-      setError(error);
-    }
-
-    await fetchGame();
-  };
-
-  const continueGame = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`http://localhost:8080/game/${id}/continue`, {
-        method: 'PUT'
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response;
-    } catch (error) {
-      setError(error);
-    }
-
-    await fetchGame();
+  const restartGame = () => {
+    console.log('Restarting Game...');
+    socket.emit('restart-game', {game: id, firstChooser: participants.find(p => p.turn === 0).id});
   };
 
   return (
@@ -285,36 +209,31 @@ const Gameboard = () => {
           gameId={id}
           maxPresentSteal={game.rule_maxstealsperpresent}
           gameStatus={game.status}
-          pickNextChooser={pickNextChooser}
-          activeChooser={participants.find(p => p.id === game.active_chooser)}
+          pickNextParticipant={pickNextParticipant}
+          activeParticipant={participants.find(p => p.id === game.active_participant)}
           presents={presents}
           setPresents={setPresents}
+          socket={socket}
+          lastStolenPresent={game.last_stolen_present}
           />
         <ParticipantList
           gameId={id}
-          activeChooser={game.active_chooser}
-          putActiveChooser={putActiveChooser}
+          activeParticipant={game.active_participant}
+          setActiveParticipant={setActiveParticipant}
           gameStatus={game.status}
           participants={participants}
           setParticipants={setParticipants}
+          socket={socket}
           />
         </>
       }
       <div>
         {
-          (game.status === 'inprogress' || game.status === 'final_round' || game.status === 'completed') &&
-          <button onClick={restartGame}>Restart Game</button>
-        }
-        {
-          (game.status === 'inprogress' || game.status === 'final_round') &&
+          ['inprogress', 'final_round', 'complete'].includes(game.status) &&
           <>
+            <button onClick={restartGame}>Restart Game</button>
             <button onClick={resetGame}>Reset Game</button>
-            <button onClick={pauseGame}>Pause Game</button>
           </>
-        }
-        {
-          game.status === 'paused' &&
-          <button onClick={continueGame}>Continue Game</button>
         }
         {
           game.status === 'final_round' &&
