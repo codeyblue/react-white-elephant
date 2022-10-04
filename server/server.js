@@ -31,8 +31,15 @@ server.use(restify.plugins.acceptParser(server.acceptable));
 server.use(restify.plugins.queryParser());
 server.use(restify.plugins.bodyParser());
 
+io.use((socket, next) => {
+  const game = socket.handshake.auth.game;
+  socket.game = game;
+  next();
+});
+
 io.on('connection', socket => {
   console.log('a user connected');
+  socket.join(socket.game);
   socket.emit('connection', null);
 
   socket.on('open-present', req => {
@@ -48,7 +55,7 @@ io.on('connection', socket => {
         if (error) throw error;
         console.log(results);
         const data = {participants: results[4], presents: transformPresentData(results[3], results[5][0].rule_maxstealsperpresent)}
-        socket.emit('present-opened', data);
+        io.in(req.game).emit('present-opened', data);
     });
   });
 
@@ -66,7 +73,7 @@ io.on('connection', socket => {
       if (error) throw error;
       console.log(results);
       const presents = transformPresentData(results[4], results[6][0].rule_maxstealsperpresent);
-      socket.emit('game-restarted', {presents, participants: results[5], game: results[6][0]});
+      io.in(req.game).emit('game-restarted', {presents, participants: results[5], game: results[6][0]});
     });
   });
 
@@ -83,7 +90,7 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getGame};${getPresents};${getParticipants}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      socket.emit('game-reset', { game: results[4][0], presents: transformPresentData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
+      io.in(req.game).emit('game-reset', { game: results[4][0], presents: transformPresentData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
     });
   });
 
@@ -94,7 +101,7 @@ io.on('connection', socket => {
     connection.query(`${queryString};${getGame}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      socket.emit('active-participant-set', results[1][0]);
+      io.in(req.game).emit('active-participant-set', results[1][0]);
     });
   });
 
@@ -103,7 +110,7 @@ io.on('connection', socket => {
     connection.query('UPDATE games SET status=?,active_participant=null where id=?;SELECT * FROM games WHERE id=?', ['complete', req.game, req.game], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      socket.emit('game-complete', results[1][0]);
+      io.in(req.game).emit('game-complete', results[1][0]);
     });
   });
 
@@ -112,7 +119,7 @@ io.on('connection', socket => {
     connection.query('UPDATE games SET status=? WHERE id=?;SELECT * FROM games WHERE id=?', ['ready', req.game, req.game], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      socket.emit('game-ready', results[1][0]);
+      io.in(req.game).emit('game-ready', results[1][0]);
     });
   });
 
@@ -127,7 +134,7 @@ io.on('connection', socket => {
     connection.query(`${setParticipants};${setGame};${getParticipants};${getGame}`, (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        socket.emit('game-started', {participants: results[2], game: results[3][0]});
+        io.in(req.game).emit('game-started', {participants: results[2], game: results[3][0]});
       });
   });
 
@@ -136,7 +143,7 @@ io.on('connection', socket => {
     connection.query('UPDATE games SET status=? where id=?;SELECT * FROM games WHERE id=?', ['final_round', req.game, req.game], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      socket.emit('final-round-set', results[1][0]);
+      io.in(req.game).emit('final-round-set', results[1][0]);
     });
   });
 
@@ -151,7 +158,7 @@ io.on('connection', socket => {
     connection.query(`${setParticipants};${setActive};${getParticipants};${getGame}`, (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        socket.emit('participant-turns-set', {participants: results[2], game: results[3][0]});
+        io.in(req.game).emit('participant-turns-set', {participants: results[2], game: results[3][0]});
       });
   });
 
@@ -170,7 +177,7 @@ io.on('connection', socket => {
         if (error) throw error;
         console.log(results);
         const presents = transformPresentData(results[5], results[7][0].rule_maxstealsperpresent);
-        socket.emit('present-stolen', {presents, participants: results[6], game: results[7][0]});
+        io.in(req.game).emit('present-stolen', {presents, participants: results[6], game: results[7][0]});
     });
   });
 
@@ -189,12 +196,12 @@ io.on('connection', socket => {
       (error, results, fields) => {
         if (error) throw error;
         const presents = transformPresentData(results[6], results[8][0].rule_maxstealsperpresent);
-        socket.emit('presents-swapped', { presents, game: results[8][0], participants: results[7]});
+        io.in(req.game).emit('presents-swapped', { presents, game: results[8][0], participants: results[7]});
     });
   });
 
-  io.on('disconnect', () => {
-    console.log('disconnect')
+  socket.on('disconnect', () => {
+    console.log('a user disconnected')
   });
 });
 

@@ -29,6 +29,8 @@ const Gameboard = ({ socket }) => {
   }, [id]);
 
   useEffect(() => {
+    socket.auth = {game: id};
+    socket.connect();
     fetchGame();
 
     socket.on('active-participant-set', req => {

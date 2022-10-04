@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import Dashboard from './Dashboard';
 import Gameboard from './components/Gameboard';
-import { io } from 'socket.io-client';
 
 const App = () => {
-  const socket = io(`http://localhost:8080`);
+  const socket = io(`http://localhost:8080`, { autoConnect: false });
 
   useEffect(() => {
     socket.on('connection', () => {
@@ -32,7 +32,7 @@ const App = () => {
     <Router>
       <Routes>
         <Route path='/' element={<Dashboard />} />
-        <Route path='/game/:id' element={<Gameboard socket={socket} />} />
+        <Route path='/game/:id' element={<Gameboard socket={socket} username={'user1'} />} />
       </Routes>
     </Router>
     </div>
