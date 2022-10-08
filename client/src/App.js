@@ -1,10 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import Dashboard from './Dashboard';
 import Gameboard from './components/Gameboard';
+import Login from './components/Login';
 
 const App = () => {
+  const [user, setUser] = useState();
+
   const socket = io(`http://localhost:8080`, { autoConnect: false });
 
   useEffect(() => {
@@ -27,14 +30,20 @@ const App = () => {
     };
   }, [socket]);
 
+  if(!user) {
+    return <Login setUser={setUser} />
+  }
+
   return (
     <div className="App">
-    <Router>
-      <Routes>
-        <Route path='/' element={<Dashboard />} />
-        <Route path='/game/:id' element={<Gameboard socket={socket} username={'user1'} />} />
-      </Routes>
-    </Router>
+      {console.log(user)}
+      <Router>
+        <Routes>
+          <Route path='/' element={<Dashboard />} />
+          <Route path='/game/:id' element={<Gameboard socket={socket} user={user} />} />
+          <Route path='/login' element={<Login setUser={setUser} />} />
+        </Routes>
+      </Router>
     </div>
   );
 }

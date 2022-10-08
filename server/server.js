@@ -209,6 +209,26 @@ server.listen(config.port, () => {
   console.log('%s listening at %s', server.name, server.url);
 });
 
+server.post('/login', (req, res, next) => {
+  console.log('Logging in');
+  connection.query('SELECT * FROM users WHERE username=?', [req.body.username], (error, results, fields) => {
+    if (error) throw error;
+
+    console.log(results);
+    if (results.length > 1) {
+      throw new Error('More than one user with this username');
+    }
+
+    if (!results[0].password === req.body.password) {
+      throw new Error('Password incorrect');
+    }
+
+    const { id, username, first_name, last_name } = results[0];
+    res.send({ id, username, first_name, last_name});
+    next();
+  });
+});
+
 server.get('/games', (req, res, next) => {
   console.log('GET games');
   connection.query('SELECT id FROM games', (error, results, fields) => {

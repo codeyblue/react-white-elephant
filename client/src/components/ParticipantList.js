@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Participant from './Participant';
 
 const ParticipantList = props => {
-  const { gameId, activeParticipant, participants, setParticipants } = props;
+  const { gameId, activeParticipant, participants, setParticipants, setCurrentParticipant, user } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -18,6 +18,7 @@ const ParticipantList = props => {
 
       const data = await response.json();
       setParticipants(data.sort((a, b) => { return a.turn - b.turn }));
+      setCurrentParticipant(data.find(d => d.user_key === user.id));
     } catch (error) {
       setError(error.message);
     }

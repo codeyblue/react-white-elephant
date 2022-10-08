@@ -2,13 +2,13 @@ import { useState } from "react";
 import './Present.css';
 
 const Present = props => {
-  const { gameId, gameStatus, maxPresentSteal, currentUser, socket, pickNextParticipant, data, lastStolenPresent } = props;
+  const { gameId, gameStatus, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const openPresent = id => {
     console.log('Opening Present...');
-    socket.emit('open-present', { game: gameId, present: id, user: currentUser.user_key });
+    socket.emit('open-present', { game: gameId, present: id, user: currentParticipant.user_key });
     pickNextParticipant('open');
   };
 
@@ -21,7 +21,7 @@ const Present = props => {
     const lock = present.history.filter(h => h.event === 'steal').length + 1 >= maxPresentSteal;
 
     const previousHolder = present.holder;
-    socket.emit('steal-present', { game: gameId, present: present.id, from: previousHolder, to: currentUser.user_key, lock });
+    socket.emit('steal-present', { game: gameId, present: present.id, from: previousHolder, to: currentParticipant.user_key, lock });
     pickNextParticipant('steal', previousHolder);
   }
 
@@ -29,7 +29,7 @@ const Present = props => {
     console.log('Swapping Presents...');
     socket.emit('swap-presents', {
       game: gameId,
-      swaper: { user: currentUser.user_key, present: currentUser.current_present_key },
+      swaper: { user: currentParticipant.user_key, present: currentParticipant.current_present_key },
       swapee: { user: present.holder, present: present.id }
     });
     pickNextParticipant('steal', present.holder);
@@ -44,13 +44,16 @@ const Present = props => {
         Gifter: {data.gifter} <br />
         Holder: {(data.holder && `${data.holder}`) || ''} <br />
         {
+          activeParticipant &&
+          currentParticipant.user_key === activeParticipant.user_key &&
           gameStatus === 'inprogress' &&
           data.status === 'wrapped' &&
           <button onClick={() => openPresent(data.id)}>Open</button>
         }
         {
-          currentUser &&
-          data.holder !== currentUser.user_key &&
+          activeParticipant &&
+          currentParticipant.user_key === activeParticipant.user_key &&
+          data.holder !== currentParticipant.user_key &&
           gameStatus === 'inprogress' &&
           data.status === 'open' &&
           lastStolenPresent !== data.id &&
@@ -62,8 +65,9 @@ const Present = props => {
           </>
         } <br />
         {
-          currentUser &&
-          data.holder !== currentUser.user_key &&
+          activeParticipant &&
+          currentParticipant.user_key === activeParticipant.user_key &&
+          data.holder !== currentParticipant.user_key &&
           gameStatus === 'final_round' &&
           data.status === 'open' &&
           <button onClick={() => swapPresents(data)}>Swap</button>

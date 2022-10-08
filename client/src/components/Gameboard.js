@@ -3,10 +3,11 @@ import { useParams } from 'react-router-dom';
 import ParticipantList from './ParticipantList';
 import PresentList from './PresentList';
 
-const Gameboard = ({ socket }) => {
+const Gameboard = ({ socket, user }) => {
   const {id} = useParams();
   const [game, setGame] = useState({});
   const [participants, setParticipants] = useState([]);
+  const [currentParticipant, setCurrentParticipant] = useState();
   const [presents, setPresents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -62,6 +63,7 @@ const Gameboard = ({ socket }) => {
       console.log(req);
       setGame(req.game);
       setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setPresents(req.presents);
     });
 
@@ -70,6 +72,7 @@ const Gameboard = ({ socket }) => {
       console.log(req);
       setGame(req.game);
       setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setPresents(req.presents);
     });
 
@@ -78,6 +81,7 @@ const Gameboard = ({ socket }) => {
       console.log(req);
       setGame(req.game);
       setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
     });
 
     socket.on('present-opened', req => {
@@ -85,6 +89,7 @@ const Gameboard = ({ socket }) => {
       console.log(req);
       setPresents(req.presents);
       setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
     });
 
     socket.on('present-stolen', req => {
@@ -92,6 +97,7 @@ const Gameboard = ({ socket }) => {
       console.log(req);
       setPresents(req.presents);
       setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setGame(req.game);
     });
 
@@ -100,6 +106,7 @@ const Gameboard = ({ socket }) => {
       console.log(req);
       setPresents(req.presents);
       setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setGame(req.game);
     });
   }, [fetchGame, socket]);
@@ -196,6 +203,8 @@ const Gameboard = ({ socket }) => {
   };
 
   return (
+    <>
+    <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
     <div className="Gameboard" style={{ display: 'flex' }}>
       { game.status === 'setup' &&
         <button onClick={setGameReady}>Ready</button>
@@ -217,6 +226,7 @@ const Gameboard = ({ socket }) => {
           setPresents={setPresents}
           socket={socket}
           lastStolenPresent={game.last_stolen_present}
+          currentParticipant={currentParticipant}
           />
         <ParticipantList
           gameId={id}
@@ -226,11 +236,14 @@ const Gameboard = ({ socket }) => {
           participants={participants}
           setParticipants={setParticipants}
           socket={socket}
+          setCurrentParticipant={setCurrentParticipant}
+          user={user}
           />
         </>
       }
       <div>
         {
+          game.administrator === user.id &&
           ['inprogress', 'final_round', 'complete'].includes(game.status) &&
           <>
             <button onClick={restartGame}>Restart Game</button>
@@ -238,11 +251,12 @@ const Gameboard = ({ socket }) => {
           </>
         }
         {
+          game.administrator === user.id &&
           game.status === 'final_round' &&
           <button onClick={setGameComplete}>Complete Game</button>
         }
       </div>
-    </div>
+    </div></>
   );
 }
 

@@ -40,7 +40,8 @@ const PresentList = props => {
           gameStatus={gameStatus}
           maxPresentSteal={maxPresentSteal}
           gameId={gameId}
-          currentUser={props.activeParticipant}
+          currentParticipant={props.currentParticipant}
+          activeParticipant={props.activeParticipant}
           socket={socket}
           pickNextParticipant={pickNextParticipant}
           lastStolenPresent={lastStolenPresent}
