@@ -229,6 +229,26 @@ server.post('/login', (req, res, next) => {
   });
 });
 
+server.post('/register', (req, res, next) => {
+  console.log('Registering user');
+  const {username, firstName, lastName, password} = req.body;
+  connection.query('SELECT * FROM users WHERE username=?', [username], (error, results, fields) => {
+    if (error) throw error;
+    if (results.length > 0) {
+      throw new Error('There already exists a user with this username');
+    }
+
+    connection.query('INSERT INTO users SET username=?, first_name=?, last_name=?, password=?',
+      [username, firstName, lastName, password],
+      (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+        res.send(results);
+        next();
+    });
+  });
+});
+
 server.get('/games', (req, res, next) => {
   console.log('GET games');
   connection.query('SELECT id FROM games', (error, results, fields) => {
