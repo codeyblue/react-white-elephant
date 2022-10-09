@@ -16,7 +16,9 @@ const Gameboard = ({ socket, user }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8080/games/${id}`);
+      const response = await fetch(`http://localhost:8080/games/${id}`, {
+        headers: { 'Authorization': `Bearer ${user.token}`}
+      });
       if (!response.ok) {
         throw new Error('Something went wrong!');
       }
@@ -27,10 +29,10 @@ const Gameboard = ({ socket, user }) => {
       setError(error.message);
     }
     setIsLoading(false);
-  }, [id]);
+  }, [id, user.token]);
 
   useEffect(() => {
-    socket.auth = {game: id};
+    socket.auth = {game: id, token: user.token};
     socket.connect();
     fetchGame();
 
@@ -109,32 +111,32 @@ const Gameboard = ({ socket, user }) => {
       setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setGame(req.game);
     });
-  }, [fetchGame, socket]);
+  }, [fetchGame, socket, user.id]);
 
   const setGameReady = () => {
     console.log('Setting game to "ready"');
-    socket.emit('set-game-ready', {game: id});
+    socket.emit('set-game-ready');
   };
 
   const setGameStart = () => {
     console.log('Setting game to "start"');
     const order = shuffleParticipants();
-    socket.emit('set-game-start', {game: id, order});
+    socket.emit('set-game-start', {order});
   };
   
   const setActiveParticipant = (pID, incrementRound) => {
     console.log('Setting active participant');
-    socket.emit('set-active-participant', {game: id, participant: pID, incrementRound});
+    socket.emit('set-active-participant', {participant: pID, incrementRound});
   };
 
   const setFinalRound = () => {
     console.log('Setting final round...');
-    socket.emit('set-final-round', {game: id});
+    socket.emit('set-final-round');
   }
 
   const setGameComplete = () => {
     console.log('Setting game to complete...');
-    socket.emit('set-game-complete', {game: id});
+    socket.emit('set-game-complete');
   }
 
   const shuffleParticipants = () => {
@@ -194,22 +196,25 @@ const Gameboard = ({ socket, user }) => {
 
   const resetGame = () => {
     console.log('Resetting game');
-    socket.emit('reset-game', {game: id});
+    socket.emit('reset-game');
   };
 
   const restartGame = () => {
     console.log('Restarting Game...');
-    socket.emit('restart-game', {game: id, firstChooser: participants.find(p => p.turn === 0).id});
+    socket.emit('restart-game', {firstChooser: participants.find(p => p.turn === 0).id});
   };
 
   return (
     <>
     <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
     <div className="Gameboard" style={{ display: 'flex' }}>
-      { game.status === 'setup' &&
+      {
+        game.administrator === user.id &&
+        game.status === 'setup' &&
         <button onClick={setGameReady}>Ready</button>
       }
       {
+        game.administrator === user.id &&
         game.status === 'ready' &&
         <button onClick={setGameStart}>Start Game</button>
       }
@@ -227,6 +232,7 @@ const Gameboard = ({ socket, user }) => {
           socket={socket}
           lastStolenPresent={game.last_stolen_present}
           currentParticipant={currentParticipant}
+          user={user}
           />
         <ParticipantList
           gameId={id}
@@ -251,7 +257,7 @@ const Gameboard = ({ socket, user }) => {
           </>
         }
         {
-          game.administrator === user.id &&
+          user.id &&
           game.status === 'final_round' &&
           <button onClick={setGameComplete}>Complete Game</button>
         }

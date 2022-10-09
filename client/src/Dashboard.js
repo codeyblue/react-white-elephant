@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const Dashboard = () => {
+const Dashboard = ({ user }) => {
   const [games, setGames] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -10,7 +10,9 @@ const Dashboard = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8080/games');
+      const response = await fetch('http://localhost:8080/games', {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
       if (!response.ok) {
         throw new Error('Something went wrong!');
       }

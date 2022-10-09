@@ -3,7 +3,7 @@ import Present from './Present';
 import './Present.css';
 
 const PresentList = props => {
-  const { gameId, maxPresentSteal, gameStatus, presents, setPresents, socket, pickNextParticipant, lastStolenPresent } = props;
+  const { gameId, maxPresentSteal, gameStatus, presents, setPresents, socket, pickNextParticipant, lastStolenPresent, user } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -11,7 +11,8 @@ const PresentList = props => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8080/game/${gameId}/presents`);
+      const response = await fetch(`http://localhost:8080/game/${gameId}/presents`,
+        {headers: { 'Authorization': `Bearer ${user.token}` }});
       if (!response.ok) {
         throw new Error('Something went wrong!');
       }
@@ -39,7 +40,6 @@ const PresentList = props => {
           data={present}
           gameStatus={gameStatus}
           maxPresentSteal={maxPresentSteal}
-          gameId={gameId}
           currentParticipant={props.currentParticipant}
           activeParticipant={props.activeParticipant}
           socket={socket}

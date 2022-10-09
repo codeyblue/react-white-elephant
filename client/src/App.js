@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import Dashboard from './Dashboard';
 import Gameboard from './components/Gameboard';
@@ -31,21 +31,18 @@ const App = () => {
     };
   }, [socket]);
 
+  if (!user) {
+    return <Login setUser={setUser} />
+  }
+
   return (
     <div className="App">
-      {console.log(user)}
       <Router>
-        {
-          !user && <>
-            <p>Login instead?</p>
-            <Link to='/login'>Login</Link>
-            <Register />
-          </>
-        }
         <Routes>
-          <Route path='/' element={<Dashboard />} />
-          <Route path='/game/:id' element={<Gameboard socket={socket} user={user} />} />
+          <Route path='/' element={<Register />}/>
           <Route path='/login' element={<Login setUser={setUser} />} />
+          <Route path='/dashboard' element={<Dashboard user={user} />} />
+          <Route path='/game/:id' element={<Gameboard socket={socket} user={user} />} />
         </Routes>
       </Router>
     </div>

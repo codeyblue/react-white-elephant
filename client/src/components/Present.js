@@ -2,13 +2,13 @@ import { useState } from "react";
 import './Present.css';
 
 const Present = props => {
-  const { gameId, gameStatus, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent } = props;
+  const { gameStatus, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const openPresent = id => {
     console.log('Opening Present...');
-    socket.emit('open-present', { game: gameId, present: id, user: currentParticipant.user_key });
+    socket.emit('open-present', { present: id, user: currentParticipant.user_key });
     pickNextParticipant('open');
   };
 
@@ -21,14 +21,13 @@ const Present = props => {
     const lock = present.history.filter(h => h.event === 'steal').length + 1 >= maxPresentSteal;
 
     const previousHolder = present.holder;
-    socket.emit('steal-present', { game: gameId, present: present.id, from: previousHolder, to: currentParticipant.user_key, lock });
+    socket.emit('steal-present', { present: present.id, from: previousHolder, to: currentParticipant.user_key, lock });
     pickNextParticipant('steal', previousHolder);
   }
 
   const swapPresents = present => {
     console.log('Swapping Presents...');
     socket.emit('swap-presents', {
-      game: gameId,
       swaper: { user: currentParticipant.user_key, present: currentParticipant.current_present_key },
       swapee: { user: present.holder, present: present.id }
     });
@@ -59,7 +58,6 @@ const Present = props => {
           lastStolenPresent !== data.id &&
           !data.maxSteals &&
           <>
-            {console.log(data)}
             History: {`${JSON.stringify(data.history)}`}
             <button onClick={() => stealPresent(data)}>Steal</button>
           </>

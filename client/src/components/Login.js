@@ -29,7 +29,6 @@ const Login = ({ setUser }) => {
     e.preventDefault();
     const userData = await loginUser({ username, password });
     setUser(userData);
-    console.log(userData);
   };
 
   return (

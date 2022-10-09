@@ -10,7 +10,9 @@ const ParticipantList = props => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8080/game/${gameId}/participants`);
+      const response = await fetch(`http://localhost:8080/game/${gameId}/participants`,
+        {headers: { 'Authorization': `Bearer ${user.token}` }}
+      );
 
       if (!response.ok) {
         throw new Error('Something went wrong!');

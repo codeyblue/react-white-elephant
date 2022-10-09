@@ -16,5 +16,6 @@ module.exports = {
       database : 'react_white_elephant',
       multipleStatements: true
     })
-  }
+  },
+  secretKey: 'secret'
 }
