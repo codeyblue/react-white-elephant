@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import Dashboard from './Dashboard';
-import Gameboard from './components/Gameboard';
-import Login from './components/Login';
-import Register from './components/Register';
+import Dashboard from './pages/Dashboard';
+import Gameboard from './pages/Gameboard';
+import Login from './components/Users/Login';
+import Register from './components/Users/Register';
 
 const App = () => {
   const [user, setUser] = useState();

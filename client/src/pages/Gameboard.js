@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ParticipantList from './ParticipantList';
-import PresentList from './PresentList';
+import ParticipantList from '../components/Participants/ParticipantList';
+import PresentList from '../components/Presents/PresentList';
 
 const Gameboard = ({ socket, user }) => {
   const {id} = useParams();
