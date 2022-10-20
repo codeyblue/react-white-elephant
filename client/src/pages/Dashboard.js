@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const Dashboard = ({ user }) => {
+import './Dashboard.css';
+
+const Dashboard = ({ user, setUser }) => {
   const [games, setGames] = useState([]);
+  const [mode, setMode] = useState('view');
+  const [username, setUsername] = useState(user.username);
+  const [password, setPassword] = useState();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -25,29 +30,151 @@ const Dashboard = ({ user }) => {
     setIsLoading(false);
   }, []);
 
+  const updateUser = async userData => {
+    let data;
+    try {
+      const response = await fetch('http://localhost:8080/updateUser', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+        body: JSON.stringify(userData)
+      });
+  
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+  
+     data = await response.json();
+    } catch (error) {
+      throw new Error('Something went wrong!');
+    }
+  
+    return data;
+  };
+
+  const resetPassword = async password => {
+    try {
+      const response = await fetch('http://localhost:8080/resetPassword', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+        body: JSON.stringify(password)
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+    } catch (error) {
+      throw new Error('Something went wrong!');
+    }
+  };
+
+  const handleCheckin = async gameId => {
+    try {
+      const response = await fetch(`http://localhost:8080/game/${gameId}/checkIn`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+    } catch (error) {
+      throw new Error('Something went wrong!');
+    }
+
+    await fetchGames();
+  };
+
+  const handleSubmitUsername = async e => {
+    e.preventDefault();
+    const userData = await updateUser({ username });
+    setUser(userData);
+    setMode('view');
+  };
+
+  const handleSubmitPassword = async e => {
+    e.preventDefault();
+    await resetPassword({ password });
+    setMode('view');
+  };
+  
   useEffect(() => {
     fetchGames();
   }, [fetchGames]);
 
-  let content = <p>No games yet.</p>;
+  let userContent;
+
+  switch (mode) {
+    case 'edit-username':
+      userContent = <div className='user-settings-panel'>
+        <div className='avatar'>Avatar Placeholder</div>
+        <form onSubmit={handleSubmitUsername}>
+          <label>
+            <input type='text' onChange={e => setUsername(e.target.value)} />
+          </label>
+          <button type='submit'>Submit</button>
+        </form>
+        <button type='cancel' onClick={() => setMode('view')}>Cancel</button>
+        <p>{`${user.first_name}`}</p>
+        <p>{`${user.last_name}`}</p>
+      </div>
+      break;
+      case 'reset-password':
+        userContent = <div className='user-settings-panel'>
+          <div className='avatar'>Avatar Placeholder</div>
+          <p>{`${user.username}`}</p>
+          <p>{`${user.first_name}`}</p>
+          <p>{`${user.last_name}`}</p>
+          <form onSubmit={handleSubmitPassword}>
+            <label>
+              <input type='text' onChange={e => setPassword(e.target.value)} />
+            </label>
+            <button type='submit'>Submit</button>
+          </form>
+          <button type='cancel' onClick={() => setMode('view')}>Cancel</button>
+        </div>
+        break;
+    default:
+      userContent = <div className='user-settings-panel'>
+        <div className='avatar'>Avatar Placeholder</div>
+        <p>{`${user.username}`}</p>
+        <p>{`${user.first_name}`}</p>
+        <p>{`${user.last_name}`}</p>
+        <button onClick={() => setMode('edit-username')}>Update username</button>
+        <button onClick={() => setMode('reset-password')}>Reset Password</button>
+      </div>;
+      break;
+  }
+
+  let gameContent = <p>No games yet.</p>;
 
   if (games.length > 0) {
     const transformedGames = 
-      games.map(game => <Link key={`game-${game.id}`} to={`/game/${game.id}`}>{`${game.id}`}</Link>);
-    content = <div key='Game List'>{transformedGames}</div>
+      games.map(game => 
+        <div id='game-link' key={`game-${game.id}`}>
+          <Link to={`/game/${game.id}`}>{`${game.id}`}</Link>
+          {game.administrator === user.id && '(a)'}
+          {!game.present && <button>Add a present</button>}
+          {!game.checked_in && <button onClick={() => handleCheckin(game.id)}>Check In</button>}
+        </div>
+      );
+    gameContent = <div key='Game List'>{transformedGames}</div>
   }
 
   if (error) {
-    content = <p>{error}</p>;
+    gameContent = <p>{error}</p>;
   }
 
   if (isLoading) {
-    content = <p>Loading...</p>;
+    gameContent = <p>Loading...</p>;
   }
 
   return (
-    <div className="Dashboard">
-      {content}
+    <div style={{display: 'flex'}}>
+      {userContent}
+      <div className="dashboard">
+        <p>My Games</p>
+        {gameContent}
+      </div>
     </div>
   );
 }

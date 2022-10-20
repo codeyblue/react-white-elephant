@@ -293,7 +293,7 @@ server.use((req, res, next) => {
       throw new Error('Authentication failed!');
     }
     const decodedToken = jwt.verify(token, config.secretKey);
-    req.userData = { userId: decodedToken.id };
+    req.userData = { userId: decodedToken.id, token };
     next();
   } catch (err) {
     throw err;
@@ -302,20 +302,32 @@ server.use((req, res, next) => {
 
 server.get('/games', (req, res, next) => {
   console.log('GET games');
-  connection.query('SELECT id FROM games', (error, results, fields) => {
-    if (error) throw error;
-    console.log(results);
-    res.send(results);
-    next();
+  connection.query('SELECT games.id, games.administrator, participants.checked_in, presents.id AS present FROM (((games INNER JOIN participants ON games.id = participants.game_key) INNER JOIN users ON users.id = participants.user_key) LEFT JOIN presents ON (users.id = presents.gifter AND presents.game_key = games.id)) WHERE users.id=?',
+    [req.userData.userId],
+    (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      res.send(results);
+      next();
   });
 });
 
 server.get('/games/:id', (req, res, next) => {
   console.log('GET game');
-  connection.query('select * from games where id=?', [req.params.id], (error, results, fields) => {
+  connection.query('SELECT * FROM games WHERE id=?', [req.params.id], (error, results, fields) => {
     if (error) throw error;
     console.log(results[0]);
     res.send(results[0]);
+    next();
+  });
+});
+
+server.put('/game/:id/checkIn', (req, res, next) => {
+  console.log(`POST checking user ${req.userData.userId} into game ${req.params.id}`);
+  connection.query('UPDATE participants SET checked_in=1 WHERE game_key=? AND user_key=?', [req.params.id, req.userData.userId], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send();
     next();
   });
 });
@@ -342,6 +354,46 @@ server.get('/game/:id/presents', (req, res, next) => {
       next();
     }
   );
+});
+
+server.put('/updateUser', (req, res, next) => {
+  console.log('POST update user'); // todo make it so that an admin can also call this, not just the person signed in
+  const allowedParams = ['username', 'password'];
+  const updateFields = Object.keys(req.body);
+  if (!updateFields.every(key => allowedParams.includes(key))) {
+    throw new Error('Attempted to update a user value that is not allowed');
+  }
+
+  const queryString = `UPDATE users SET 
+    ${Object.entries(req.body).map((entry) => `${entry[0]}='${entry[1]}'`).join(' ')} WHERE id=${req.userData.userId};
+    SELECT id,username,first_name,last_name FROM users WHERE id=${req.userData.userId}`;
+  connection.query(queryString, (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    const {id, username, first_name, last_name} = results[1][0];
+    res.send({ id, username, first_name, last_name, token: req.userData.token});
+    next();
+  });
+});
+
+server.put('/resetPassword', (req, res, next) => {
+  console.log(`Resetting password for user ${req.userData.userId}`);
+  console.log(req.body.password)
+  try {
+    bcrypt.hash(req.body.password, 12).then(pass => {
+      console.log(pass)
+      connection.query('UPDATE users SET password=? WHERE id=?',
+      [pass, req.userData.userId],
+      (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+        res.send(results);
+        next();
+      });
+    });
+  } catch (err) {
+    throw err;
+  }
 });
 
 const transformPresentData = (data, maxPresentSteals) => {
