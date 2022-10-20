@@ -21,7 +21,7 @@ const loginUser = async (creds) => {
   return data;
 };
 
-const Login = ({ setUser }) => {
+const Login = ({ user, setUser }) => {
   const [username, setUsername] = useState();
   const [password, setPassword] = useState();
 
@@ -32,21 +32,30 @@ const Login = ({ setUser }) => {
   };
 
   return (
-    <div className='Login'>
-      <form onSubmit={handleSubmit}>
-        <label>
-          <p>Username</p>
-          <input type='text' onChange={e => setUsername(e.target.value)} />
-        </label>
-        <label>
-          <p>Password</p>
-          <input type='text' onChange={e => setPassword(e.target.value)} />
-        </label>
-        <div>
-          <button type='submit'>Submit</button>
+    <>
+      {!user &&
+        <div className='Login'>
+          <form onSubmit={handleSubmit}>
+            <label>
+              <p>Username</p>
+              <input type='text' onChange={e => setUsername(e.target.value)} />
+            </label>
+            <label>
+              <p>Password</p>
+              <input type='password' onChange={e => setPassword(e.target.value)} />
+            </label>
+            <div>
+              <button type='submit'>Submit</button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
+      }
+      {user &&
+        <div className='Logout'>
+          <button type='submit' onClick={() => setUser()}>Logout</button>
+        </div>
+      }
+    </>
   );
 };
 

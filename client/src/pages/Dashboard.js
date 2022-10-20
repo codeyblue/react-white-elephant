@@ -126,7 +126,7 @@ const Dashboard = ({ user, setUser }) => {
           <p>{`${user.last_name}`}</p>
           <form onSubmit={handleSubmitPassword}>
             <label>
-              <input type='text' onChange={e => setPassword(e.target.value)} />
+              <input type='password' onChange={e => setPassword(e.target.value)} />
             </label>
             <button type='submit'>Submit</button>
           </form>

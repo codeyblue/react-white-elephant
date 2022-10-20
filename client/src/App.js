@@ -42,7 +42,7 @@ const App = () => {
         <NavBar user={user} />
         <Routes>
           <Route path='/register' element={<Register />}/>
-          <Route path='/login' element={<Login setUser={setUser} />} />
+          <Route path='/login' element={<Login setUser={setUser} user={user} />} />
           <Route path='/dashboard' element={<Dashboard user={user} setUser={setUser} />} />
           <Route path='/game/:id' element={<Gameboard socket={socket} user={user} />} />
         </Routes>

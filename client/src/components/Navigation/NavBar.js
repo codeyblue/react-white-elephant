@@ -3,21 +3,21 @@ import { NavLink } from 'react-router-dom';
 const NavBar = ({ user }) => {
   return <div style={{ height: '40px', backgroundColor: 'grey'}}>
     <ul>
-      <li>
-        <NavLink to='/' exact>Home</NavLink>
+      <li key='home'>
+        <NavLink to='/' exact='true'>Home</NavLink>
       </li>
       {!user &&
         <>
-          <li>
+          <li key='login'>
             <NavLink to='/login'>Login</NavLink>
           </li>
-          <li>
+          <li key='register'>
             <NavLink to='/register'>Register</NavLink>
           </li>
         </>
       }
       {user &&
-        <li>
+        <li key='dashboard'>
           <NavLink to='/dashboard'>Dashboard</NavLink>
         </li>
       }
