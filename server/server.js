@@ -227,24 +227,26 @@ server.post('/login', (req, res, next) => {
   connection.query('SELECT * FROM users WHERE username=?', [req.body.username], (error, results, fields) => {
     if (error) throw error;
 
-    console.log(results);
     if (results.length > 1) {
       throw new Error('More than one user with this username');
     }
 
     try {
-      bcrypt.compare(results[0].password, req.body.password)
-        .then(() => {
-          const { id, username, first_name, last_name } = results[0];
-          let token;
-          try {
-            token = jwt.sign({ id }, config.secretKey);
-          } catch (e) {
-            throw e;
-          }
-          res.send({ id, username, first_name, last_name, token});
-          next();
-        })
+      bcrypt.compare(req.body.password, results[0].password).then(match => {
+        if (!match) {
+          throw new Error('Authentication failed');
+        }
+
+        const { id, username, first_name, last_name } = results[0];
+        let token;
+        try {
+          token = jwt.sign({ id }, config.secretKey);
+        } catch (e) {
+          throw e;
+        }
+        res.send({ id, username, first_name, last_name, token});
+        next();
+      });
     } catch (e) {
       throw e;
     }
@@ -266,7 +268,6 @@ server.post('/register', (req, res, next) => {
 
     try {
       bcrypt.hash(password, 12).then(pass => {
-        console.log(pass)
         connection.query('INSERT INTO users SET username=?, first_name=?, last_name=?, password=?',
         [username, firstName, lastName, pass],
         (error, results, fields) => {
