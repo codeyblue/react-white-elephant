@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Gameboard from './pages/Gameboard';
 import Login from './components/Users/Login';
 import Register from './components/Users/Register';
+import NavBar from './components/Navigation/NavBar';
 
 const App = () => {
   const [user, setUser] = useState();
@@ -31,15 +32,16 @@ const App = () => {
     };
   }, [socket]);
 
-  if (!user) {
-    return <Login setUser={setUser} />
-  }
+  // if (!user) {
+  //   return <Login setUser={setUser} />
+  // }
 
   return (
     <div className="App">
       <Router>
+        <NavBar user={user} />
         <Routes>
-          <Route path='/' element={<Register />}/>
+          <Route path='/register' element={<Register />}/>
           <Route path='/login' element={<Login setUser={setUser} />} />
           <Route path='/dashboard' element={<Dashboard user={user} setUser={setUser} />} />
           <Route path='/game/:id' element={<Gameboard socket={socket} user={user} />} />
