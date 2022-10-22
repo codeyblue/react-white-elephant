@@ -342,6 +342,43 @@ server.get('/game/:id/participants', (req, res, next) => {
   });
 });
 
+server.post('/game/:id/present', (req, res, next) => {
+  console.log(`POST present from user ${req.userData.userId} into game ${req.params.id}`);
+  const presentData = req.body;
+  console.log(presentData)
+  if (!presentData.items || presentData.items.length < 1) {
+    throw new Error('Present must have at least one item');
+  }
+
+  connection.query('SELECT id FROM participants WHERE user_key=? AND game_key=?;SELECT id FROM presents WHERE gifter=? AND game_key=?', [req.userData.userId, req.params.id, req.userData.userId, req.params.id], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    if (results[0].length < 1) {
+      throw new Error('Attempted to add a new present for a game the user is not a participant of');
+    }
+    if (results[1].length > 0) {
+      throw new Error('Attempted to add a new present for a game that the user already has a present for');
+    }
+
+    connection.query('INSERT INTO presents SET gifter=?, status=?, game_key=?; SELECT id FROM presents WHERE gifter=? AND game_key=?', [req.userData.userId, 'wrapped', req.params.id, req.userData.userId, req.params.id], (err, re, fds) => {
+      if (err) throw err;
+      console.log(re);
+      if (re[1].length < 1) {
+        throw new Error('Something went wrong with adding the present');
+      }
+
+      const present_key = re[1][0].id;
+      const items = presentData.items.map(item => `(${present_key}, "${item.description}")`);
+      connection.query(`INSERT INTO present_items (present_key, description) VALUES ${items}`, (e, r, f) => {
+        if (e) throw e;
+        console.log(r);
+        res.send({});
+        next();
+      });
+    });
+  });
+});
+
 server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
   connection.query(

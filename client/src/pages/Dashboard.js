@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import Modal from '../components/Modal/Modal';
+import EditPresent from '../components/Presents/EditPresent';
 import ViewPresent from '../components/Presents/ViewPresent';
 import './Dashboard.css';
 
@@ -104,6 +105,14 @@ const Dashboard = ({ user, setUser }) => {
     setModalState({show: false, mode: '', content: null});
   }
 
+  const handleAddPresent = (game) => {
+    setModalState({
+      show: true,
+      mode: 'Add Present',
+      content: <EditPresent gameData={game} user={user} />
+    });
+  }
+
   const fetchPresent = useCallback(async (gid, pid) => {
     let data;
     try {
@@ -186,7 +195,7 @@ const Dashboard = ({ user, setUser }) => {
         <div id='game-link' key={`game-${game.id}`}>
           <Link to={`/game/${game.id}`}>{`${game.id}`}</Link>
           {game.administrator === user.id && '(a)'}
-          {!game.present && <button>Add a present</button>}
+          {!game.present && <button onClick={() => handleAddPresent(game)}>Add a present</button>}
           {game.present && <button onClick={() => handleViewPresent(game, game.present)}>View present</button>}
           {!game.checked_in && <button onClick={() => handleCheckin(game.id)}>Check In</button>}
         </div>
