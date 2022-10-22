@@ -135,7 +135,7 @@ const Dashboard = ({ user, setUser }) => {
     setModalState({
       show: true,
       mode: '',
-      content: <ViewPresent presentData={presentData} gameData={gameData} />
+      content: <ViewPresent presentData={presentData} gameData={gameData} modalState={modalState} setModalState={setModalState} user={user} />
     });
   }
   

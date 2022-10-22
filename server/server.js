@@ -345,7 +345,6 @@ server.get('/game/:id/participants', (req, res, next) => {
 server.post('/game/:id/present', (req, res, next) => {
   console.log(`POST present from user ${req.userData.userId} into game ${req.params.id}`);
   const presentData = req.body;
-  console.log(presentData)
   if (!presentData.items || presentData.items.length < 1) {
     throw new Error('Present must have at least one item');
   }
@@ -406,6 +405,62 @@ server.get('/game/:id/present/:pid', (req, res, next) => {
   });
 });
 
+server.put('/game/:id/presents/:pid/update', (req, res, next) => {
+  // todo data validation for if someone tries to update nothing
+  console.log(`PUT updating present ${req.params.pid}`);
+  const {id, pid} = req.params;
+  const newItems = req.body.items;
+  const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId}${newItems ? `;SELECT * FROM present_items WHERE present_key=${pid}` : null}`;
+
+  connection.query(firstQuery, (error, results, fields) => {
+    if (error) throw error;
+
+    console.log(results);
+    if (results[0].length < 1) throw new Error('Attempted to change a present that either does not exist or was not gifted by this user.');
+    
+    const secondQuery = [];
+    
+    if (newItems) {
+      const presentItems = results[1];
+      let values = '';
+
+      if (presentItems.length > 0) {
+        let deletedItems = presentItems.filter(item => !newItems.map(i => i.id).includes(item.id));
+        let updatedItems = newItems.filter(item => presentItems.filter(i => (i.id === item.id) && (i.description != item.description)).length > 0);
+        let addedItems = newItems.filter(item => (typeof item.id === 'string') && (item.id.includes('new')));
+
+        if (deletedItems.length > 0) {
+          secondQuery.push(`DELETE FROM present_items WHERE id IN (${deletedItems.map(item => item.id).join()})`);
+        }
+
+        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}')`).join() : null;
+        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}')`).join() : null;
+
+        if (updatedItems || addedItems) {
+          values = `${updatedItems}${updatedItems && addedItems ? ',' : null}${addedItems}`;
+        }
+      } else {
+        values = newItems.map(item => `(null, ${pid}, '${item.description}')`).join();
+      }
+
+      if (values) {
+        secondQuery.push(`INSERT INTO present_items (id, present_key, description) VALUES ${values} AS \`item\` ON DUPLICATE KEY UPDATE description=item.description`);
+      }
+    }
+
+    if (req.body.game_key) {
+      secondQuery.push(req.body.game_key !== undefined ? `UPDATE presents SET game_key=${req.body.game_key} WHERE id=${pid}` : '');
+    }
+
+    connection.query(secondQuery.join(';'), (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      res.send({});
+      next();
+    });
+  });
+});
+
 server.put('/updateUser', (req, res, next) => {
   console.log('PUT update user'); // todo make it so that an admin can also call this, not just the person signed in
   const allowedParams = ['username', 'password'];
@@ -428,10 +483,8 @@ server.put('/updateUser', (req, res, next) => {
 
 server.put('/resetPassword', (req, res, next) => {
   console.log(`Resetting password for user ${req.userData.userId}`);
-  console.log(req.body.password)
   try {
     bcrypt.hash(req.body.password, 12).then(pass => {
-      console.log(pass)
       connection.query('UPDATE users SET password=? WHERE id=?',
       [pass, req.userData.userId],
       (error, results, fields) => {

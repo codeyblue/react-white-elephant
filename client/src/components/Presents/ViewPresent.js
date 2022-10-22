@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import EditPresent from './EditPresent';
 
-const ViewPresent = ({ presentData, gameData }) => {
+// todo add ability to delete present
+
+const ViewPresent = ({ presentData, gameData, setModalState, user }) => {
   const items = presentData.items.map(item => {
     return <div key={`item-${item.id}`}>
       {item.img && <img src={item.img} alt={`img-${item.id}`} />}
@@ -9,11 +11,16 @@ const ViewPresent = ({ presentData, gameData }) => {
     </div>;
   });
 
+  const handleEditPresent = (e) => {
+    e.preventDefault();
+    setModalState({show: true, mode: 'Edit Present', content: <EditPresent presentData={presentData} gameData={gameData} user={user} />})
+  };
+
   return <>
     <h3>{presentData.name && <p>{`${presentData.name}`}</p>}</h3>
     <p>Game {`${gameData.id}`} ({`${gameData.status}`})</p>
     {items}
-    <Link to={`/game/${gameData.id}/present/${presentData.id}/edit`}>Edit</Link>
+    <button onClick={(e) => handleEditPresent(e)}>Edit</button>
   </>;
 };
 
