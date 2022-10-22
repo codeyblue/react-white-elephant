@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import Modal from '../components/Modal/Modal';
+import ViewPresent from '../components/Presents/ViewPresent';
 import './Dashboard.css';
 
 const Dashboard = ({ user, setUser }) => {
   const [games, setGames] = useState([]);
   const [mode, setMode] = useState('view');
+  const [modalState, setModalState] = useState({show: false, mode: '', content: null});
   const [username, setUsername] = useState(user.username);
   const [password, setPassword] = useState();
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +31,7 @@ const Dashboard = ({ user, setUser }) => {
       setError(error.message);
     }
     setIsLoading(false);
-  }, []);
+  }, [user.token]);
 
   const updateUser = async userData => {
     let data;
@@ -96,6 +99,36 @@ const Dashboard = ({ user, setUser }) => {
     await resetPassword({ password });
     setMode('view');
   };
+
+  const handleModalClose = () => {
+    setModalState({show: false, mode: '', content: null});
+  }
+
+  const fetchPresent = useCallback(async (gid, pid) => {
+    let data;
+    try {
+      const response = await fetch(`http://localhost:8080/game/${gid}/present/${pid}`,
+        {headers: { 'Authorization': `Bearer ${user.token}` }});
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      data = await response.json();
+    } catch (error) {
+      setError(error.message);
+    }
+    return data;
+  }, [user.token]);
+
+  const handleViewPresent = async (gameData, id) => {
+    const presentData = await fetchPresent(gameData.id, id);
+
+    setModalState({
+      show: true,
+      mode: '',
+      content: <ViewPresent presentData={presentData} gameData={gameData} />
+    });
+  }
   
   useEffect(() => {
     fetchGames();
@@ -118,7 +151,7 @@ const Dashboard = ({ user, setUser }) => {
         <p>{`${user.last_name}`}</p>
       </div>
       break;
-      case 'reset-password':
+    case 'reset-password':
         userContent = <div className='user-settings-panel'>
           <div className='avatar'>Avatar Placeholder</div>
           <p>{`${user.username}`}</p>
@@ -154,6 +187,7 @@ const Dashboard = ({ user, setUser }) => {
           <Link to={`/game/${game.id}`}>{`${game.id}`}</Link>
           {game.administrator === user.id && '(a)'}
           {!game.present && <button>Add a present</button>}
+          {game.present && <button onClick={() => handleViewPresent(game, game.present)}>View present</button>}
           {!game.checked_in && <button onClick={() => handleCheckin(game.id)}>Check In</button>}
         </div>
       );
@@ -169,13 +203,22 @@ const Dashboard = ({ user, setUser }) => {
   }
 
   return (
-    <div style={{display: 'flex'}}>
-      {userContent}
-      <div className="dashboard">
-        <p>My Games</p>
-        {gameContent}
+    <>
+      <Modal
+        show={modalState.show}
+        onCancel={handleModalClose}
+        header={modalState.mode}
+        footer={<button onClick={handleModalClose}>CLOSE</button>}>
+          {modalState.content}
+      </Modal>
+      <div style={{display: 'flex'}}>
+        {userContent}
+        <div className="dashboard">
+          <p>My Games</p>
+          {gameContent}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

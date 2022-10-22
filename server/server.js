@@ -67,7 +67,7 @@ io.on('connection', socket => {
       (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        const data = {participants: results[4], presents: transformPresentData(results[3], results[5][0].rule_maxstealsperpresent)}
+        const data = {participants: results[4], presents: transformPresentsData(results[3], results[5][0].rule_maxstealsperpresent)}
         io.in(socket.game).emit('present-opened', data);
     });
   });
@@ -85,7 +85,7 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getPresents};${getParticipants};${getGame}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      const presents = transformPresentData(results[4], results[6][0].rule_maxstealsperpresent);
+      const presents = transformPresentsData(results[4], results[6][0].rule_maxstealsperpresent);
       io.in(socket.game).emit('game-restarted', {presents, participants: results[5], game: results[6][0]});
     });
   });
@@ -103,7 +103,7 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getGame};${getPresents};${getParticipants}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('game-reset', { game: results[4][0], presents: transformPresentData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
+      io.in(socket.game).emit('game-reset', { game: results[4][0], presents: transformPresentsData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
     });
   });
 
@@ -189,7 +189,7 @@ io.on('connection', socket => {
       (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        const presents = transformPresentData(results[5], results[7][0].rule_maxstealsperpresent);
+        const presents = transformPresentsData(results[5], results[7][0].rule_maxstealsperpresent);
         io.in(socket.game).emit('present-stolen', {presents, participants: results[6], game: results[7][0]});
     });
   });
@@ -208,7 +208,7 @@ io.on('connection', socket => {
     connection.query(`${updateSwaperHistory};${updateSwapeeHistory};${updateSwaperPresent};${updateSwapeePresent};${updateSwaperParticipant};${updateSwapeeParticipant};${getPresentData};${getParticipantData};${getGameData}`,
       (error, results, fields) => {
         if (error) throw error;
-        const presents = transformPresentData(results[6], results[8][0].rule_maxstealsperpresent);
+        const presents = transformPresentsData(results[6], results[8][0].rule_maxstealsperpresent);
         io.in(socket.game).emit('presents-swapped', { presents, game: results[8][0], participants: results[7]});
     });
   });
@@ -302,7 +302,7 @@ server.use((req, res, next) => {
 
 server.get('/games', (req, res, next) => {
   console.log('GET games');
-  connection.query('SELECT games.id, games.administrator, participants.checked_in, presents.id AS present FROM (((games INNER JOIN participants ON games.id = participants.game_key) INNER JOIN users ON users.id = participants.user_key) LEFT JOIN presents ON (users.id = presents.gifter AND presents.game_key = games.id)) WHERE users.id=?',
+  connection.query('SELECT games.id, games.administrator, games.status, participants.checked_in, presents.id AS present FROM (((games INNER JOIN participants ON games.id = participants.game_key) INNER JOIN users ON users.id = participants.user_key) LEFT JOIN presents ON (users.id = presents.gifter AND presents.game_key = games.id)) WHERE users.id=?',
     [req.userData.userId],
     (error, results, fields) => {
       if (error) throw error;
@@ -323,7 +323,7 @@ server.get('/games/:id', (req, res, next) => {
 });
 
 server.put('/game/:id/checkIn', (req, res, next) => {
-  console.log(`POST checking user ${req.userData.userId} into game ${req.params.id}`);
+  console.log(`PUT checking user ${req.userData.userId} into game ${req.params.id}`);
   connection.query('UPDATE participants SET checked_in=1 WHERE game_key=? AND user_key=?', [req.params.id, req.userData.userId], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
@@ -350,14 +350,27 @@ server.get('/game/:id/presents', (req, res, next) => {
     (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      res.send(transformPresentData(results[0], results[1][0]));
+      res.send(transformPresentsData(results[0], results[1][0]));
       next();
     }
   );
 });
 
+server.get('/game/:id/present/:pid', (req, res, next) => {
+  console.log(`GET present ${req.params.pid}`);
+  connection.query('SELECT presents.*, present_items.id AS pid, present_items.description AS item_description FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    if (results.length < 1) {
+      throw new Error('No present with that data exists');
+    }
+    res.send(transformPresentData(results));
+    next();
+  });
+});
+
 server.put('/updateUser', (req, res, next) => {
-  console.log('POST update user'); // todo make it so that an admin can also call this, not just the person signed in
+  console.log('PUT update user'); // todo make it so that an admin can also call this, not just the person signed in
   const allowedParams = ['username', 'password'];
   const updateFields = Object.keys(req.body);
   if (!updateFields.every(key => allowedParams.includes(key))) {
@@ -396,7 +409,7 @@ server.put('/resetPassword', (req, res, next) => {
   }
 });
 
-const transformPresentData = (data, maxPresentSteals) => {
+const transformPresentsData = (data, maxPresentSteals) => {
   let tempPresents = [];
   const uniquePresents = [...new Set(data.map(item => item.id))];
   uniquePresents.forEach(id => {
@@ -416,3 +429,13 @@ const transformPresentData = (data, maxPresentSteals) => {
 
   return tempPresents;
 };
+
+const transformPresentData = (data) => {
+  const {id, gifter, status, holder, game_key} = data[0];
+  const presentdata = {
+    id, gifter, status, holder, game_key,
+    items: data.map(item => { return {id: item.pid, description: item.item_description}})
+  };
+
+  return presentdata;
+}
