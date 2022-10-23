@@ -109,7 +109,7 @@ const Dashboard = ({ user, setUser }) => {
     setModalState({
       show: true,
       mode: 'Add Present',
-      content: <EditPresent gameData={game} user={user} />
+      content: <EditPresent gameData={game} user={user} games={games} />
     });
   }
 
@@ -135,7 +135,7 @@ const Dashboard = ({ user, setUser }) => {
     setModalState({
       show: true,
       mode: '',
-      content: <ViewPresent presentData={presentData} gameData={gameData} modalState={modalState} setModalState={setModalState} user={user} />
+      content: <ViewPresent presentData={presentData} gameData={gameData} modalState={modalState} setModalState={setModalState} user={user} games={games} />
     });
   }
   

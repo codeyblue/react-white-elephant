@@ -410,13 +410,15 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
   console.log(`PUT updating present ${req.params.pid}`);
   const {id, pid} = req.params;
   const newItems = req.body.items;
-  const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId}${newItems ? `;SELECT * FROM present_items WHERE present_key=${pid}` : null}`;
+  const changeGame = req.body.game_key;
+  const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId}${newItems ? `;SELECT * FROM present_items WHERE present_key=${pid}` : ''}${changeGame ? `;SELECT id FROM presents WHERE game_key=${changeGame} AND gifter=${req.userData.userId}` : ''}`;
 
   connection.query(firstQuery, (error, results, fields) => {
     if (error) throw error;
 
     console.log(results);
     if (results[0].length < 1) throw new Error('Attempted to change a present that either does not exist or was not gifted by this user.');
+    if (results[2] && results[2].length > 0) throw new Error('Cannot move present, this user already has a present for this game');
     
     const secondQuery = [];
     
@@ -433,11 +435,11 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
           secondQuery.push(`DELETE FROM present_items WHERE id IN (${deletedItems.map(item => item.id).join()})`);
         }
 
-        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}')`).join() : null;
-        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}')`).join() : null;
+        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}')`).join() : '';
+        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}')`).join() : '';
 
         if (updatedItems || addedItems) {
-          values = `${updatedItems}${updatedItems && addedItems ? ',' : null}${addedItems}`;
+          values = `${updatedItems}${updatedItems && addedItems ? ',' : ''}${addedItems}`;
         }
       } else {
         values = newItems.map(item => `(null, ${pid}, '${item.description}')`).join();
@@ -448,8 +450,8 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
       }
     }
 
-    if (req.body.game_key) {
-      secondQuery.push(req.body.game_key !== undefined ? `UPDATE presents SET game_key=${req.body.game_key} WHERE id=${pid}` : '');
+    if (changeGame) {
+      secondQuery.push(changeGame !== undefined ? `UPDATE presents SET game_key=${req.body.game_key} WHERE id=${pid}` : '');
     }
 
     connection.query(secondQuery.join(';'), (error, results, fields) => {

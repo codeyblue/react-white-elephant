@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 
-// todo add the ability to update what game the present is in
+// todo add the ability to reset changes
 
-const EditPresent = ({ presentData, gameData, user }) => {
+const EditPresent = ({ presentData, gameData, user, games }) => {
   const [items, setItems] = useState(presentData ? presentData.items : [{id: 'new-0', description: ''}]);
   const [newItemId, setNewItemId] = useState(presentData ? items[items.length-1].id + 1 : 1);
+  const [gameValue, setGameValue] = useState(gameData.id.toString());
   const type = presentData ? 'update' : 'new';
+
+  const handleSelectChange = (e) => {
+    setGameValue(e.target.value);
+  }
 
   const handleChange = (i, e) => {
     let newItems = [...items];
@@ -43,13 +48,17 @@ const EditPresent = ({ presentData, gameData, user }) => {
   };
 
   const postPresent = async () => {
-    const input = {items};
+    let input = {items};
+    if (gameValue !== gameData.id.toString()) {
+      input.game_key = gameValue;
+    }
+
     console.log(input);
     try {
       const response = await fetch(`http://localhost:8080/game/${gameData.id}/present`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify({items: items})
+        body: JSON.stringify(input)
       });
   
       if(!response.ok) {
@@ -63,13 +72,17 @@ const EditPresent = ({ presentData, gameData, user }) => {
   };
 
   const updatePresent = async () => {
-    const input = {items};
+    let input = {items};
+    if (gameValue !== gameData.id.toString()) {
+      input.game_key = gameValue;
+    }
+
     console.log(input);
     try {
       const response = await fetch(`http://localhost:8080/game/${gameData.id}/presents/${presentData.id}/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify({items: items})
+        body: JSON.stringify(input)
       });
   
       if(!response.ok) {
@@ -86,6 +99,19 @@ const EditPresent = ({ presentData, gameData, user }) => {
     <div key='Edit Present'>
       <p>Game {gameData.id} ({gameData.status})</p>
       <form onSubmit={handleSubmit}>
+        {
+          (games.length > 1 && games.filter(game => !game.present) &&
+          <label>
+            Game
+            <select name='game' value={gameValue} onChange={handleSelectChange}>
+              {games.filter(game => !game.present || game.id === gameData.id).map(game => {
+                return <option key={`select-${game.id}`} value={game.id}>{game.id} ({game.status})</option>
+              })}
+            </select>
+          </label>) || (games.length === 1 &&
+            <p>Game {gameData.id} ({gameData.status})</p>
+          )
+        }
         {items.map((item, i) => {
           return <div key={`item-${i}`}>
             <label>Description</label>

@@ -2,7 +2,7 @@ import EditPresent from './EditPresent';
 
 // todo add ability to delete present
 
-const ViewPresent = ({ presentData, gameData, setModalState, user }) => {
+const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
   const items = presentData.items.map(item => {
     return <div key={`item-${item.id}`}>
       {item.img && <img src={item.img} alt={`img-${item.id}`} />}
@@ -13,7 +13,7 @@ const ViewPresent = ({ presentData, gameData, setModalState, user }) => {
 
   const handleEditPresent = (e) => {
     e.preventDefault();
-    setModalState({show: true, mode: 'Edit Present', content: <EditPresent presentData={presentData} gameData={gameData} user={user} />})
+    setModalState({show: true, mode: 'Edit Present', content: <EditPresent presentData={presentData} gameData={gameData} user={user} games={games} />})
   };
 
   return <>
