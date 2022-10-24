@@ -24,7 +24,6 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
   };
 
   const handleRemoveItem = (i) => {
-    console.log(items);
     let newItems = [...items];
     newItems = newItems.filter(item => item.id !== i);
     setItems(newItems);
@@ -97,10 +96,9 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
 
   return (
     <div key='Edit Present'>
-      <p>Game {gameData.id} ({gameData.status})</p>
       <form onSubmit={handleSubmit}>
         {
-          (games.length > 1 && games.filter(game => !game.present) &&
+          (games.length > 1 && games.filter(game => !game.present).length > 0 &&
           <label>
             Game
             <select name='game' value={gameValue} onChange={handleSelectChange}>
@@ -108,9 +106,8 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
                 return <option key={`select-${game.id}`} value={game.id}>{game.id} ({game.status})</option>
               })}
             </select>
-          </label>) || (games.length === 1 &&
+          </label>) ||
             <p>Game {gameData.id} ({gameData.status})</p>
-          )
         }
         {items.map((item, i) => {
           return <div key={`item-${i}`}>

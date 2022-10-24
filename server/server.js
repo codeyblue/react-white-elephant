@@ -405,6 +405,24 @@ server.get('/game/:id/present/:pid', (req, res, next) => {
   });
 });
 
+server.del('/game/:id/present/:pid', (req, res, next) => {
+  console.log(`DELETE present ${req.params.pid}`);
+  connection.query('SELECT id FROM presents WHERE id=? AND gifter=?', [req.params.pid, req.userData.userId], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    if (results.length < 1) {
+      throw new Error('This user does not have this present');
+    }
+
+    connection.query('DELETE FROM present_items WHERE present_key=?;DELETE FROM presents WHERE id=?', [req.params.pid, req.params.pid], (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      res.send({});
+      next();
+    });
+  });
+});
+
 server.put('/game/:id/presents/:pid/update', (req, res, next) => {
   // todo data validation for if someone tries to update nothing
   console.log(`PUT updating present ${req.params.pid}`);
