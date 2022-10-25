@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+
 import ParticipantList from '../components/Participants/ParticipantList';
 import PresentList from '../components/Presents/PresentList';
+import Modal from '../components/Modal/Modal';
 
 const Gameboard = ({ socket, user }) => {
   const {id} = useParams();
@@ -9,6 +11,7 @@ const Gameboard = ({ socket, user }) => {
   const [participants, setParticipants] = useState([]);
   const [currentParticipant, setCurrentParticipant] = useState();
   const [presents, setPresents] = useState([]);
+  const [modalState, setModalState] = useState({show: false, header: '', content: null});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -204,8 +207,19 @@ const Gameboard = ({ socket, user }) => {
     socket.emit('restart-game', {firstChooser: participants.find(p => p.turn === 0).id});
   };
 
+  const handleModalClose = () => {
+    setModalState({show: false, mode: '', content: null});
+  }
+
   return (
     <>
+    <Modal
+      show={modalState.show}
+      onCancel={handleModalClose}
+      header={modalState.mode}
+      footer={<button onClick={handleModalClose}>CLOSE</button>}>
+        {modalState.content}
+    </Modal>
     <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
     <div className="Gameboard" style={{ display: 'flex' }}>
       {
@@ -233,6 +247,7 @@ const Gameboard = ({ socket, user }) => {
           lastStolenPresent={game.last_stolen_present}
           currentParticipant={currentParticipant}
           user={user}
+          setModalState={setModalState}
           />
         <ParticipantList
           gameId={id}
