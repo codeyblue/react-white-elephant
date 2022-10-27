@@ -12,3 +12,7 @@
   display: inline-flex;
   width: 75vw;
 }
+
+.gifted {
+  background-color: red;
+}

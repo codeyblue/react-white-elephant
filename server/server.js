@@ -381,12 +381,15 @@ server.post('/game/:id/present', (req, res, next) => {
 server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
   connection.query(
-    'SELECT presents.*, game_history.event FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=?;SELECT rule_maxstealsperpresent FROM games where id=?',
-    [req.params.id, req.params.id],
+    'SELECT presents.*, game_history.event FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=?;SELECT present_items.* FROM present_items INNER JOIN presents ON present_items.present_key = presents.id WHERE presents.game_key=?;SELECT rule_maxstealsperpresent FROM games where id=?',
+    [req.params.id, req.params.id, req.params.id],
     (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      res.send(transformPresentsData(results[0], results[1][0]));
+      const presentHistory = results[0];
+      const presentItems = results[1];
+      const maxPresentSteal = results[2][0];
+      res.send(transformPresentsData(presentItems, presentHistory, maxPresentSteal));
       next();
     }
   );
@@ -519,21 +522,23 @@ server.put('/resetPassword', (req, res, next) => {
   }
 });
 
-const transformPresentsData = (data, maxPresentSteals) => {
+const transformPresentsData = (itemData, history, maxPresentSteals) => {
   let tempPresents = [];
-  const uniquePresents = [...new Set(data.map(item => item.id))];
+  const uniquePresents = [...new Set(history.map(present => present.id))];
   uniquePresents.forEach(id => {
-    const d = data.find(d => d.id === id);
-    let history = data.filter(h => h.id === id)
-    history = history ? history.map(h => { return { event: h.event }}) : null;
-    const steals = history.filter(h => h.event === 'steal');
+    const present = history.find(p => p.id === id); // grabs a single instance of the history for the base present data
+    const items = itemData.filter(item => item.present_key === id).map(item => { return {id: item.id, description: item.description }}); // grabs all the items associated with the unique present id
+    let events = history.filter(event => event.id === id) // grabs all history for the history of the present
+    events = events ? events.map(e => { return { event: e.event }}) : null;
+    const steals = events.filter(e => e.event === 'steal');
     tempPresents.push({
       id,
-      gifter: d.gifter,
-      status: d.status,
-      holder: d.holder,
+      items,
+      gifter: present.gifter,
+      status: present.status,
+      holder: present.holder,
       maxSteals: steals ? steals.length >= maxPresentSteals : false,
-      history
+      history: events
     });
   });
 

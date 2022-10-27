@@ -46,6 +46,7 @@ const PresentList = props => {
           pickNextParticipant={pickNextParticipant}
           lastStolenPresent={lastStolenPresent}
           setModalState={setModalState}
+          gameId={gameId}
           />
       );
     presentContent = <div key='Present List'>{transformedPresents}</div>

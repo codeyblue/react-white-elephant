@@ -1,10 +1,16 @@
 import { useState } from "react";
+
 import './Present.css';
+import ViewPresent from './ViewPresent';
 
 const Present = props => {
-  const { gameStatus, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState } = props;
+  const { gameStatus, gameId, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const giftedPresentClass = !['inprogress', 'final_round'].includes(gameStatus) && data.gifter === currentParticipant.user_key ?
+    'gifted' : '';
+  const holdingPresentClass = data.holder === currentParticipant.user_key ? 'holding' : '';
 
   const openPresent = id => {
     console.log('Opening Present...');
@@ -43,7 +49,14 @@ const Present = props => {
     const isActiveParticipant = activeParticipant &&
       currentParticipant.user_key === activeParticipant.user_key;
 
-    if (isActiveParticipant && gameStatus === 'inprogress' && data.status === 'wrapped') {
+    if (giftedPresentClass === 'gifted' && ['setup', 'ready'].includes(gameStatus)) {
+      console.log(data)
+      setModalState({
+        show: true,
+        header: '',
+        content: <ViewPresent presentData={data} gameData={{id: gameId, status: gameStatus}} setModalState={setModalState} user={currentParticipant.user_key} />
+      });
+    } else if (isActiveParticipant && gameStatus === 'inprogress' && data.status === 'wrapped') {
       setModalState({
         show: true,
         header: '',
@@ -92,19 +105,19 @@ const Present = props => {
 
   switch (data.status) {
     case 'wrapped':
-      presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className='wrapped-present' onClick={handleClick}>
+      presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className={`wrapped-present ${giftedPresentClass}`} onClick={handleClick}>
         <p>Present {data.id}</p>
       </div>
       break;
     case 'open':
-      presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className='open-present' onClick={handleClick}>
+      presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className={`open-present ${holdingPresentClass}`} onClick={handleClick}>
         <p>Present {data.id}</p>
         <div><p>This is where the main photo of the present would be</p></div>
         <p>Holder: {(data.holder && `${data.holder}`) || ''}</p>
       </div>
       break;
     case 'locked':
-      presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className='locked-present' onClick={handleClick}>
+      presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className={`locked-present ${holdingPresentClass}`} onClick={handleClick}>
         <p>Present {data.id}</p>
         <div><p>This is where the main photo of the present would be</p></div>
         <p>Holder: {(data.holder && `${data.holder}`) || ''}</p>
