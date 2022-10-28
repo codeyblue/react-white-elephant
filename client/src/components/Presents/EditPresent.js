@@ -98,7 +98,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
     <div key='Edit Present'>
       <form onSubmit={handleSubmit}>
         {
-          (games.length > 1 && games.filter(game => !game.present).length > 0 &&
+          (games && games.length > 1 && games.filter(game => !game.present).length > 0 &&
           <label>
             Game
             <select name='game' value={gameValue} onChange={handleSelectChange}>

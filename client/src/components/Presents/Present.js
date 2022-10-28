@@ -4,7 +4,7 @@ import './Present.css';
 import ViewPresent from './ViewPresent';
 
 const Present = props => {
-  const { gameStatus, gameId, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState } = props;
+  const { gameStatus, gameId, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState, user } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -50,11 +50,10 @@ const Present = props => {
       currentParticipant.user_key === activeParticipant.user_key;
 
     if (giftedPresentClass === 'gifted' && ['setup', 'ready'].includes(gameStatus)) {
-      console.log(data)
       setModalState({
         show: true,
         header: '',
-        content: <ViewPresent presentData={data} gameData={{id: gameId, status: gameStatus}} setModalState={setModalState} user={currentParticipant.user_key} />
+        content: <ViewPresent presentData={data} gameData={{id: gameId, status: gameStatus}} setModalState={setModalState} user={user} />
       });
     } else if (isActiveParticipant && gameStatus === 'inprogress' && data.status === 'wrapped') {
       setModalState({

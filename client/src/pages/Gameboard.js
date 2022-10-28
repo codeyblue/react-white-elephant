@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import EditPresent from '../components/Presents/EditPresent';
 import ParticipantList from '../components/Participants/ParticipantList';
 import PresentList from '../components/Presents/PresentList';
 import Modal from '../components/Modal/Modal';
@@ -114,7 +115,7 @@ const Gameboard = ({ socket, user }) => {
       setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setGame(req.game);
     });
-  }, [fetchGame, socket, user.id]);
+  }, [id, user.token, fetchGame, socket, user.id]);
 
   const setGameReady = () => {
     console.log('Setting game to "ready"');
@@ -209,7 +210,15 @@ const Gameboard = ({ socket, user }) => {
 
   const handleModalClose = () => {
     setModalState({show: false, mode: '', content: null});
-  }
+  };
+
+  const handleAddPresent = (game) => {
+    setModalState({
+      show: true,
+      mode: 'Add Present',
+      content: <EditPresent gameData={game} user={user} />
+    });
+  };
 
   return (
     <>
@@ -221,6 +230,10 @@ const Gameboard = ({ socket, user }) => {
         {modalState.content}
     </Modal>
     <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
+    {
+      !presents.find(present => present.gifter === currentParticipant.user_key) &&
+      <button onClick={() => handleAddPresent(game)}>Add Present</button>
+    }
     <div className="Gameboard" style={{ display: 'flex' }}>
       {
         game.administrator === user.id &&

@@ -24,7 +24,7 @@ const PresentList = props => {
       setError(error.message);
     }
     setIsLoading(false);
-  }, [gameId, setPresents]);
+  }, [gameId, setPresents, user.token]);
 
   useEffect(() => {
     fetchPresents();
@@ -47,6 +47,7 @@ const PresentList = props => {
           lastStolenPresent={lastStolenPresent}
           setModalState={setModalState}
           gameId={gameId}
+          user={user}
           />
       );
     presentContent = <div key='Present List'>{transformedPresents}</div>
