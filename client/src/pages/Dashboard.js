@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import api from '../common/api';
 import Modal from '../components/Modal/Modal';
 import EditPresent from '../components/Presents/EditPresent';
 import ViewPresent from '../components/Presents/ViewPresent';
@@ -18,86 +19,30 @@ const Dashboard = ({ user, setUser }) => {
   const fetchGames = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    try {
-      const response = await fetch('http://localhost:8080/games', {
-        headers: { 'Authorization': `Bearer ${user.token}` }
-      });
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      const data = await response.json();
-      setGames(data);
-    } catch (error) {
-      setError(error.message);
+    const response = await api.fetchGames(user.token);
+    if (!response.error) {
+      setGames(response.data);
+    } else {
+      setError(response.error)
     }
     setIsLoading(false);
   }, [user.token]);
 
-  const updateUser = async userData => {
-    let data;
-    try {
-      const response = await fetch('http://localhost:8080/updateUser', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify(userData)
-      });
-  
-      if(!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-  
-     data = await response.json();
-    } catch (error) {
-      throw new Error('Something went wrong!');
-    }
-  
-    return data;
-  };
-
-  const resetPassword = async password => {
-    try {
-      const response = await fetch('http://localhost:8080/resetPassword', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify(password)
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-    } catch (error) {
-      throw new Error('Something went wrong!');
-    }
-  };
-
   const handleCheckin = async gameId => {
-    try {
-      const response = await fetch(`http://localhost:8080/game/${gameId}/checkIn`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${user.token}` }
-      });
-
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-    } catch (error) {
-      throw new Error('Something went wrong!');
-    }
-
+    await api.gameCheckin(user.token, gameId);
     await fetchGames();
   };
 
   const handleSubmitUsername = async e => {
     e.preventDefault();
-    const userData = await updateUser({ username });
+    const userData = (await api.updateUser(user.token, { username })).data;
     setUser(userData);
     setMode('view');
   };
 
   const handleSubmitPassword = async e => {
     e.preventDefault();
-    await resetPassword({ password });
+    await api.resetPassword(user.token, { password });
     setMode('view');
   };
 
@@ -113,24 +58,8 @@ const Dashboard = ({ user, setUser }) => {
     });
   }
 
-  const fetchPresent = useCallback(async (gid, pid) => {
-    let data;
-    try {
-      const response = await fetch(`http://localhost:8080/game/${gid}/present/${pid}`,
-        {headers: { 'Authorization': `Bearer ${user.token}` }});
-      if (!response.ok) {
-        throw new Error('Something went wrong!');
-      }
-
-      data = await response.json();
-    } catch (error) {
-      setError(error.message);
-    }
-    return data;
-  }, [user.token]);
-
   const handleViewPresent = async (gameData, id) => {
-    const presentData = await fetchPresent(gameData.id, id);
+    const presentData = (await api.fetchPresent(user.token, gameData.id, id)).data;
 
     setModalState({
       show: true,
