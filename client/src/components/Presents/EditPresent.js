@@ -52,7 +52,6 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
       input.game_key = gameValue;
     }
 
-    console.log(input);
     try {
       const response = await fetch(`http://localhost:8080/game/${gameData.id}/present`, {
         method: 'POST',
@@ -72,6 +71,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
 
   const updatePresent = async () => {
     let input = {items};
+    console.log(input)
     if (gameValue !== gameData.id.toString()) {
       input.game_key = gameValue;
     }
@@ -111,11 +111,17 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
         }
         {items.map((item, i) => {
           return <div key={`item-${i}`}>
-            <label>Description</label>
-            <input type='text' name='description' value={item.description || ''} onChange={e => handleChange(i, e)} />
-            {
-              items.length > 1 ? <button type='button' onClick={() => handleRemoveItem(item.id)}>X</button> : null
-            }
+            <label>
+              Description
+              <input type='text' name='description' value={item.description || ''} onChange={e => handleChange(i, e)} />
+              {
+                items.length > 1 ? <button type='button' onClick={() => handleRemoveItem(item.id)}>X</button> : null
+              }
+            </label>
+            <label>
+              Link
+              <input type='text' name='hyperlink' value={item.hyperlink || ''} onChange={e => handleChange(i, e)} />
+            </label>
           </div>
         })}
         <div>

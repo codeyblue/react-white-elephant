@@ -397,7 +397,7 @@ server.get('/game/:id/presents', (req, res, next) => {
 
 server.get('/game/:id/present/:pid', (req, res, next) => {
   console.log(`GET present ${req.params.pid}`);
-  connection.query('SELECT presents.*, present_items.id AS pid, present_items.description AS item_description FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
+  connection.query('SELECT presents.*, present_items.id AS pid, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     if (results.length < 1) {
@@ -449,15 +449,15 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
 
       if (presentItems.length > 0) {
         let deletedItems = presentItems.filter(item => !newItems.map(i => i.id).includes(item.id));
-        let updatedItems = newItems.filter(item => presentItems.filter(i => (i.id === item.id) && (i.description != item.description)).length > 0);
+        let updatedItems = newItems.filter(item => presentItems.filter(i => (i.id === item.id) && ((i.description !== item.description)).length > 0 || (i.hyperlink !== item.hyperlink)));
         let addedItems = newItems.filter(item => (typeof item.id === 'string') && (item.id.includes('new')));
 
         if (deletedItems.length > 0) {
           secondQuery.push(`DELETE FROM present_items WHERE id IN (${deletedItems.map(item => item.id).join()})`);
         }
 
-        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}')`).join() : '';
-        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}')`).join() : '';
+        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}', '${item.hyperlink}')`).join() : '';
+        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}', '${item.hyperlink}')`).join() : '';
 
         if (updatedItems || addedItems) {
           values = `${updatedItems}${updatedItems && addedItems ? ',' : ''}${addedItems}`;
@@ -467,7 +467,7 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
       }
 
       if (values) {
-        secondQuery.push(`INSERT INTO present_items (id, present_key, description) VALUES ${values} AS \`item\` ON DUPLICATE KEY UPDATE description=item.description`);
+        secondQuery.push(`INSERT INTO present_items (id, present_key, description, hyperlink) VALUES ${values} AS \`item\` ON DUPLICATE KEY UPDATE description=item.description, hyperlink=item.hyperlink`);
       }
     }
 
@@ -527,7 +527,7 @@ const transformPresentsData = (itemData, history, maxPresentSteals) => {
   const uniquePresents = [...new Set(history.map(present => present.id))];
   uniquePresents.forEach(id => {
     const present = history.find(p => p.id === id); // grabs a single instance of the history for the base present data
-    const items = itemData.filter(item => item.present_key === id).map(item => { return {id: item.id, description: item.description }}); // grabs all the items associated with the unique present id
+    const items = itemData.filter(item => item.present_key === id).map(item => { return {id: item.id, description: item.description, hyperlink: item.hyperlink }}); // grabs all the items associated with the unique present id
     let events = history.filter(event => event.id === id) // grabs all history for the history of the present
     events = events ? events.map(e => { return { event: e.event }}) : null;
     const steals = events.filter(e => e.event === 'steal');
@@ -549,7 +549,7 @@ const transformPresentData = (data) => {
   const {id, gifter, status, holder, game_key} = data[0];
   const presentdata = {
     id, gifter, status, holder, game_key,
-    items: data.map(item => { return {id: item.pid, description: item.item_description}})
+    items: data.map(item => { return {id: item.pid, description: item.item_description, hyperlink: item.item_hyperlink}})
   };
 
   return presentdata;

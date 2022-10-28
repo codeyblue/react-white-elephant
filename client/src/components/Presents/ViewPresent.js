@@ -4,6 +4,7 @@ const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
   const items = presentData.items.map(item => {
     return <div key={`item-${item.id}`}>
       <p>{item.description}</p>
+      <p>{item.hyperlink}</p>
     </div>;
   });
 
