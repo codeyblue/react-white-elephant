@@ -6,6 +6,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
   const [items, setItems] = useState(presentData ? presentData.items : [{id: 'new-0', description: ''}]);
   const [newItemId, setNewItemId] = useState(presentData ? items[items.length-1].id + 1 : 1);
   const [gameValue, setGameValue] = useState(gameData.id.toString());
+  const [images, setImages] = useState([]);
   const type = presentData ? 'update' : 'new';
 
   const handleSelectChange = (e) => {
@@ -25,8 +26,26 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
 
   const handleRemoveItem = (i) => {
     let newItems = [...items];
+    let newImages = [...images];
     newItems = newItems.filter(item => item.id !== i);
+    newImages = images.filter(image => image.id !== i);
     setItems(newItems);
+    setImages(newImages);
+  };
+
+  const handleItemImageChange = (i, e) => {
+    let newImages = [...images];
+    let updateIndex = newImages.find(image => image.id === i);
+    if (updateIndex > -1) {
+      newImages[updateIndex].file = e.target.files[0];
+    } else {
+      newImages.push({id: i, file: e.target.files[0]});
+    }
+    setImages(newImages);
+  }
+
+  const handleWrapping = (e) => {
+    setImages([...images, {id: 'wrapping', file: e.target.files[0]}]);
   };
 
   const handleSubmit = async (e) => {
@@ -71,17 +90,21 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
 
   const updatePresent = async () => {
     let input = {items};
-    console.log(input)
-    if (gameValue !== gameData.id.toString()) {
-      input.game_key = gameValue;
-    }
 
-    console.log(input);
+    const formData = new FormData();
+    if (gameValue !== gameData.id.toString()) {
+      formData.append('game_key', gameValue);
+    }
+    formData.append('items', JSON.stringify(items));
+    images.forEach(image => {
+      formData.append(image.id, image.file);
+    });
+
     try {
       const response = await fetch(`http://localhost:8080/game/${gameData.id}/presents/${presentData.id}/update`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify(input)
+        headers: { 'Authorization': `Bearer ${user.token}` },
+        body: formData
       });
   
       if(!response.ok) {
@@ -122,8 +145,16 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
               Link
               <input type='text' name='hyperlink' value={item.hyperlink || ''} onChange={e => handleChange(i, e)} />
             </label>
+            <label>
+              Image
+              <input type='file' name={`${item.id}`} onChange={e => handleItemImageChange(item.id, e)}/>
+            </label>
           </div>
         })}
+        <label>
+          Wrapping
+          <input type='file' name='wrapping' onChange={handleWrapping} />
+        </label>
         <div>
           <button type='button' onClick={() => handleAddItem()}>Add Item</button>
           <button type='submit'>Submit</button>

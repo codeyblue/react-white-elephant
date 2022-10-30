@@ -32,7 +32,12 @@ server.pre(cors.preflight);
 server.use(cors.actual);
 server.use(restify.plugins.acceptParser(server.acceptable));
 server.use(restify.plugins.queryParser());
-server.use(restify.plugins.bodyParser());
+server.use(restify.plugins.bodyParser(
+  {
+    mapParams: true,
+    mapFiles: true
+  })
+);
 
 io.use((socket, next) => {
   const { game, token } = socket.handshake.auth;
@@ -429,8 +434,10 @@ server.del('/game/:id/present/:pid', (req, res, next) => {
 server.put('/game/:id/presents/:pid/update', (req, res, next) => {
   // todo data validation for if someone tries to update nothing
   console.log(`PUT updating present ${req.params.pid}`);
-  const {id, pid} = req.params;
-  const newItems = req.body.items;
+  console.log(req.files);
+  
+  const {pid} = req.params;
+  const newItems = JSON.parse(req.body.items);
   const changeGame = req.body.game_key;
   const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId}${newItems ? `;SELECT * FROM present_items WHERE present_key=${pid}` : ''}${changeGame ? `;SELECT id FROM presents WHERE game_key=${changeGame} AND gifter=${req.userData.userId}` : ''}`;
 
