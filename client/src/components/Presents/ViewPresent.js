@@ -1,6 +1,6 @@
 import EditPresent from './EditPresent';
 
-const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
+const ViewPresent = ({ presentData, gameData, setModalState, user, games, mode }) => {
   const items = presentData.items.map(item => {
     let hyperlink = item.hyperlink;
     if (hyperlink && !hyperlink.includes('http')) {
@@ -15,6 +15,7 @@ const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
         <a href={hyperlink}>{item.description}</a>) ||
         <p>{item.description}</p>
       }
+      <hr />
     </div>;
   });
 
@@ -45,11 +46,16 @@ const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
 
   return <>
     <h3>{presentData.name && <p>{`${presentData.name}`}</p>}</h3>
-    <p>Game {`${gameData.id}`} ({`${gameData.status}`})</p>
-    <img src={`http://localhost:8080/${presentData.wrapping}`} />
+    {presentData.holder && <p>Holder: {`${presentData.holder}`}</p>}
+    <hr />
+    {
+      mode === 'dashboard' &&
+      <p>Game {`${gameData.id}`} ({`${gameData.status}`})</p> &&
+      <img src={`http://localhost:8080/${presentData.wrapping}`} /> &&
+      <button onClick={(e) => handleEditPresent(e)}>Edit</button> &&
+      <button onClick={(e) => handleDeletePresent(e)}>Delete</button>
+    }
     {items}
-    <button onClick={(e) => handleEditPresent(e)}>Edit</button>
-    <button onClick={(e) => handleDeletePresent(e)}>Delete</button>
   </>;
 };
 

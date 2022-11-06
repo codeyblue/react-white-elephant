@@ -48,7 +48,6 @@ server.use(restify.plugins.bodyParser(
 
 io.use((socket, next) => {
   const { game, token } = socket.handshake.auth;
-  console.log(game, token);
   try {
     if (!token) {
       throw new Error('Authentication failed!');
@@ -69,17 +68,22 @@ io.on('connection', socket => {
 
   socket.on('open-present', req => {
     console.log(`User ${req.user} opened present ${req.present}`);
-    const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}`;
+    const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}, user_key=${req.user}`;
     const updatePresent = `UPDATE presents SET status='open', holder=${req.user} WHERE id=${req.present}`;
     const updateParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.user}`;
-    const getPresentData = `SELECT presents.*, game_history.event FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getMaxPresentSteals = `SELECT rule_maxstealsperpresent FROM games WHERE id=${socket.game}`
-    connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getParticipantData};${getMaxPresentSteals}`,
+    connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getMaxPresentSteals}`,
       (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        const data = {participants: results[4], presents: transformPresentsData(results[3], results[5][0].rule_maxstealsperpresent)}
+        const presentData = results[3];
+        const itemData = results[4];
+        const participants = results[5];
+        const maxSteals = results[6][0].rule_maxstealsperpresent;
+        const data = {participants, presents: transformPresentHistoryData(presentData, maxSteals, itemData)}
         io.in(socket.game).emit('present-opened', data);
     });
   });
@@ -97,7 +101,7 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getPresents};${getParticipants};${getGame}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      const presents = transformPresentsData(results[4], results[6][0].rule_maxstealsperpresent);
+      const presents = transformPresentHistoryData(results[4], results[6][0].rule_maxstealsperpresent);
       io.in(socket.game).emit('game-restarted', {presents, participants: results[5], game: results[6][0]});
     });
   });
@@ -115,7 +119,7 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getGame};${getPresents};${getParticipants}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('game-reset', { game: results[4][0], presents: transformPresentsData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
+      io.in(socket.game).emit('game-reset', { game: results[4][0], presents: transformPresentHistoryData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
     });
   });
 
@@ -189,39 +193,49 @@ io.on('connection', socket => {
 
   socket.on('steal-present', req => {
     console.log(`User ${req.to} stole present ${req.present} from ${req.from}`);
-    const updateHistory = `INSERT INTO game_history SET event='steal', present_key=${req.present}, game_key=${socket.game}`;
+    const updateHistory = `INSERT INTO game_history SET event='steal', present_key=${req.present}, game_key=${socket.game}, user_key=${req.to}`;
     const updatePresent = `UPDATE presents SET holder=${req.to}${req.locked ? `, status='locked'` : ``} WHERE id=${req.present}`;
     const updateFromParticipant = `UPDATE participants SET current_present_key=null WHERE user_key=${req.from}`;
     const updateToParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.to}`;
     const updateGame = `UPDATE games SET last_stolen_present=${req.present} WHERE id=${socket.game}`;
-    const getPresentData = `SELECT presents.*, game_history.event FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGameData = `SELECT * FROM games WHERE id=${socket.game}`
-    connection.query(`${updatePresent};${updateHistory};${updateFromParticipant};${updateToParticipant};${updateGame};${getPresentData};${getParticipantData};${getGameData}`,
+    connection.query(`${updatePresent};${updateHistory};${updateFromParticipant};${updateToParticipant};${updateGame};${getPresentData};${getPresentItems};${getParticipantData};${getGameData}`,
       (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        const presents = transformPresentsData(results[5], results[7][0].rule_maxstealsperpresent);
-        io.in(socket.game).emit('present-stolen', {presents, participants: results[6], game: results[7][0]});
+        const presentData = results[5];
+        const itemData = results[6];
+        const participants = results[7];
+        const game = results[8][0];
+        const presents = transformPresentHistoryData(presentData, game.rule_maxstealsperpresent, itemData);
+        io.in(socket.game).emit('present-stolen', {presents, participants, game});
     });
   });
 
   socket.on('swap-presents', req => {
-    console.log(`User ${req.swaper.user} swapped presents with ${req.swapee.user}. Present ${req.swaper.present} and ${req.swapee.present}`);
-    const updateSwaperHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swaper.present}, game_key=${socket.game}`;
-    const updateSwapeeHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swapee.present}, game_key=${socket.game}`;
-    const updateSwaperPresent = `UPDATE presents SET holder=${req.swapee.user} WHERE id=${req.swaper.present}`;
-    const updateSwapeePresent = `UPDATE presents SET holder=${req.swaper.user},status='locked' WHERE id=${req.swapee.present}`;
-    const updateSwaperParticipant = `UPDATE participants SET current_present_key=${req.swapee.present} WHERE user_key=${req.swaper.user}`;
-    const updateSwapeeParticipant = `UPDATE participants SET current_present_key=${req.swaper.present} WHERE user_key=${req.swapee.user}`;
-    const getPresentData = `SELECT presents.*, game_history.event FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    console.log(`User ${req.swapper.user} swapped presents with ${req.swappee.user}. Present ${req.swapper.present} and ${req.swappee.present}`);
+    const updateSwapperHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swapper.present}, game_key=${socket.game}, user_key=${req.swapper.user}`;
+    const updateSwappeeHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swappee.present}, game_key=${socket.game}, user_key=${req.swapper.user}`;
+    const updateSwapperPresent = `UPDATE presents SET holder=${req.swappee.user} WHERE id=${req.swapper.present}`;
+    const updateSwappeePresent = `UPDATE presents SET holder=${req.swapper.user},status='locked' WHERE id=${req.swappee.present}`;
+    const updateSwapperParticipant = `UPDATE participants SET current_present_key=${req.swappee.present} WHERE user_key=${req.swapper.user}`;
+    const updateSwappeeParticipant = `UPDATE participants SET current_present_key=${req.swapper.present} WHERE user_key=${req.swappee.user}`;
+    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGameData = `SELECT * FROM games WHERE id=${socket.game}`;
-    connection.query(`${updateSwaperHistory};${updateSwapeeHistory};${updateSwaperPresent};${updateSwapeePresent};${updateSwaperParticipant};${updateSwapeeParticipant};${getPresentData};${getParticipantData};${getGameData}`,
+    connection.query(`${updateSwapperHistory};${updateSwappeeHistory};${updateSwapperPresent};${updateSwappeePresent};${updateSwapperParticipant};${updateSwappeeParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getGameData}`,
       (error, results, fields) => {
         if (error) throw error;
-        const presents = transformPresentsData(results[6], results[8][0].rule_maxstealsperpresent);
-        io.in(socket.game).emit('presents-swapped', { presents, game: results[8][0], participants: results[7]});
+        const presentData = results[6];
+        const itemData = results[7];
+        const participants = results[8];
+        const game = results[9][0];
+        const presents = transformPresentHistoryData(presentData, game.rule_maxstealsperpresent, itemData);
+        io.in(socket.game).emit('presents-swapped', { presents, game, participants});
     });
   });
 
@@ -399,8 +413,11 @@ server.post('/game/:id/present', (req, res, next) => {
 
 server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
+  const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${req.params.id}`;
+  const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${req.params.id} AND presents.status IN ('open', 'locked')`
+  const getMaxPresentSteals = `SELECT rule_maxstealsperpresent FROM games WHERE id=${req.params.id}`;
   connection.query(
-    'SELECT presents.*, game_history.event FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=?;SELECT present_items.* FROM present_items INNER JOIN presents ON present_items.present_key = presents.id WHERE presents.game_key=?;SELECT rule_maxstealsperpresent FROM games where id=?',
+    `${getPresentData};${getPresentItems};${getMaxPresentSteals}`,
     [req.params.id, req.params.id, req.params.id],
     (error, results, fields) => {
       if (error) throw error;
@@ -408,7 +425,7 @@ server.get('/game/:id/presents', (req, res, next) => {
       const presentHistory = results[0];
       const presentItems = results[1];
       const maxPresentSteal = results[2][0];
-      res.send(transformPresentsData(presentItems, presentHistory, maxPresentSteal));
+      res.send(transformPresentHistoryData(presentHistory, maxPresentSteal, presentItems));
       next();
     }
   );
@@ -416,7 +433,7 @@ server.get('/game/:id/presents', (req, res, next) => {
 
 server.get('/game/:id/present/:pid', (req, res, next) => {
   console.log(`GET present ${req.params.pid}`);
-  connection.query('SELECT presents.*, present_items.id AS pid, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
+  connection.query('SELECT presents.* AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     if (results.length < 1) {
@@ -582,21 +599,22 @@ server.put('/resetPassword', (req, res, next) => {
 
 server.get('/uploads/images/*', restify.plugins.serveStaticFiles('./uploads/images'));
 
-const transformPresentsData = (itemData, history, maxPresentSteals) => {
+const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
   let tempPresents = [];
   const uniquePresents = [...new Set(history.map(present => present.id))];
   uniquePresents.forEach(id => {
     const present = history.find(p => p.id === id); // grabs a single instance of the history for the base present data
-    const items = itemData.filter(item => item.present_key === id).map(item => { return {id: item.id, description: item.description, hyperlink: item.hyperlink }}); // grabs all the items associated with the unique present id
-    let events = history.filter(event => event.id === id) // grabs all history for the history of the present
-    events = events ? events.map(e => { return { event: e.event }}) : null;
+    let events = history.filter(event => event.id === id);
+    events = events ? events.map(e => { return { event: e.event, user: e.user_key }}) : null;
     const steals = events.filter(e => e.event === 'steal');
+    const items = itemData ? itemData.filter(item => item.pid === id) : null;
     tempPresents.push({
       id,
-      items,
+      items: items && items.length > 0 ? transformPresentData(items).items : null,
       gifter: present.gifter,
       status: present.status,
       holder: present.holder,
+      wrapping: present.wrapping, 
       maxSteals: steals ? steals.length >= maxPresentSteals : false,
       history: events
     });
@@ -606,10 +624,12 @@ const transformPresentsData = (itemData, history, maxPresentSteals) => {
 };
 
 const transformPresentData = (data) => {
-  const {id, gifter, status, holder, game_key, wrapping} = data[0];
+  console.log(data);
+  const {gifter, status, holder, game_key, wrapping} = data[0];
   const presentdata = {
-    id, gifter, status, holder, game_key, wrapping,
-    items: data.map(item => { return {id: item.pid, description: item.item_description, hyperlink: item.item_hyperlink, image: item.item_image}})
+    id: data[0].pid,
+    gifter, status, holder, game_key, wrapping,
+    items: data.map(item => { return {id: item.id, description: item.item_description, hyperlink: item.item_hyperlink, image: item.item_image}})
   };
 
   return presentdata;

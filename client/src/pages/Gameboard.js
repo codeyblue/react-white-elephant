@@ -231,7 +231,7 @@ const Gameboard = ({ socket, user }) => {
     </Modal>
     <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
     {
-      !presents.find(present => present.gifter === currentParticipant.user_key) &&
+      currentParticipant && !presents.find(present => present.gifter === currentParticipant.user_key) &&
       <button onClick={() => handleAddPresent(game)}>Add Present</button>
     }
     <div className="Gameboard" style={{ display: 'flex' }}>

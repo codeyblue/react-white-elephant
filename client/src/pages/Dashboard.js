@@ -64,7 +64,7 @@ const Dashboard = ({ user, setUser }) => {
     setModalState({
       show: true,
       mode: '',
-      content: <ViewPresent presentData={presentData} gameData={gameData} modalState={modalState} setModalState={setModalState} user={user} games={games} />
+      content: <ViewPresent mode='dashboard' presentData={presentData} gameData={gameData} modalState={modalState} setModalState={setModalState} user={user} games={games} />
     });
   }
   
