@@ -326,6 +326,48 @@ server.use((req, res, next) => {
   }
 });
 
+server.post('/game', (req, res, next) => {
+  console.log('POST game');
+
+  const {body} = req;
+  const gameData = {
+    conferenceLink: body['conference-link'] ? `'${body['conference-link']}'` : 'null',
+    date: body.date ? `'${body.date}'` : 'null',
+    extraRound: body['extra-round'] === 'on' ? true : false,
+    firstPersonChooseAgain: body['first-person-choose-again'] === 'on' ? true : false,
+    name: body['game-name'] ? `'${body['game-name']}'` : 'null',
+    maxPresentSteals: body['max-present-steals'] === 'on' && body['max-present-steals-num'] ? body['max-present-steals-num'] : -1,
+    maxRoundSteals: body['max-round-steals'] === 'on' && body['max-round-steals-num'] ? body['max-round-steals-num'] : -1,
+    time: body.time ? `'${body.time}'` : 'null'
+  };
+  const participants = JSON.parse(body.participants);
+
+  if (gameData.maxPresentSteals === 'null' && gameData.maxRoundSteals === 'null') {
+    // maybe add max present steals per round vs per game
+    throw new Error('Must pust some restraint on the game');
+  }
+
+  const gameValues = `(${req.userData.userId}, ${gameData.conferenceLink}, ${gameData.date}, ${gameData.extraRound}, ${gameData.firstPersonChooseAgain}, ${gameData.name}, ${gameData.maxPresentSteals}, ${gameData.maxRoundSteals}, ${gameData.time})`;
+
+  connection.query(`INSERT INTO games (administrator, conference_link, date, rule_extraround, rule_firstpersonsecondchance, name, rule_maxstealsperpresent, rule_maxstealsperround, time) VALUES ${gameValues}`,
+    (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      const gameId = results.insertId;
+
+      const values = participants.length > 0 ? participants.map(participant => {return `(${participant.id}, ${gameId})`}) : [];
+      values.push(`(${req.userData.userId}, ${gameId})`);
+
+      connection.query(`INSERT INTO participants (user_key, game_key) VALUES ${values}`, (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+        res.send({game: gameId});
+        next();
+      });
+    }
+  );
+});
+
 server.get('/games', (req, res, next) => {
   console.log('GET games');
   connection.query('SELECT games.id, games.administrator, games.status, participants.checked_in, presents.id AS present FROM (((games INNER JOIN participants ON games.id = participants.game_key) INNER JOIN users ON users.id = participants.user_key) LEFT JOIN presents ON (users.id = presents.gifter AND presents.game_key = games.id)) WHERE users.id=?',
@@ -450,8 +492,8 @@ server.del('/game/:id/present/:pid', (req, res, next) => {
     if (error) throw error;
     console.log(results);
 
-    const gameStatus = results[0];
-    const presentData = results[1];
+    const gameStatus = results[0][0].status;
+    const presentData = results[1][0];
     const unlinkFiles = [presentData.wrapping];
 
     if (!['setup', 'ready'].includes(gameStatus)) { throw new Error ('Attempted to delete a present for a game that is not in setup or ready status')};
@@ -464,7 +506,7 @@ server.del('/game/:id/present/:pid', (req, res, next) => {
       console.log(results);
 
       const presentItems = results[0];
-      unlinkFiles.push(...presentItems.map(item => item.image));
+      unlinkFiles.push(...presentItems.filter(item => item.image).map(item => item.image));
       unlinkFiles.forEach(file => fs.unlink(file, err => { console.log(err)}));
 
       res.send({});
@@ -601,6 +643,16 @@ server.put('/resetPassword', (req, res, next) => {
 });
 
 server.get('/uploads/images/*', restify.plugins.serveStaticFiles('./uploads/images'));
+
+server.get('/users', (req, res, next) => {
+  console.log('GET all users');
+  connection.query('SELECT id, username FROM users', (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    res.send(results);
+    next();
+  });
+});
 
 const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
   let tempPresents = [];

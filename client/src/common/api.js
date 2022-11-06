@@ -34,6 +34,24 @@ module.exports = {
     }
   },
 
+  fetchUsers: async (token) => {
+    let res = {data: null, error: null};
+    try {
+      const response = await fetch(`http://localhost:8080/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      res.data = await response.json();
+      return res;
+    } catch (error) {
+      res.error = error;
+      return res;
+    }
+  },
+
   gameCheckin: async (token, gameId) => {
     let res = {error: null};
     try {
@@ -45,6 +63,27 @@ module.exports = {
       if (!response.ok) {
         throw new Error('Something went wrong!');
       }
+      return res;
+    } catch (error) {
+      res.error = error;
+      return res;
+    }
+  },
+
+  postGame: async (token, input) => {
+    let res = {data: null, error: null};
+    try {
+      const response = await fetch(`http://localhost:8080/game`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`},
+        body: input
+      });
+
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      res.data = await response.json();
       return res;
     } catch (error) {
       res.error = error;

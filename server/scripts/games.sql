@@ -9,6 +9,10 @@ CREATE TABLE `games` (
   `rule_maxstealsperround` int DEFAULT -1,
   `rule_firstpersonsecondchance` bool DEFAULT true,
   `rule_extraround` bool DEFAULT true,
+  `conference_link` varchar(255) DEFAULT null,
+  `date` date default null,
+  `name` varchar(255) DEFAULT null,
+  `time` varchar(255) DEFAULT null,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`administrator`) REFERENCES users(`id`),
   FOREIGN KEY (`active_participant`) REFERENCES participants(`id`)

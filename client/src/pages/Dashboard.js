@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import api from '../common/api';
+import CreateGame from '../components/Game/CreateGame';
 import Modal from '../components/Modal/Modal';
 import EditPresent from '../components/Presents/EditPresent';
 import ViewPresent from '../components/Presents/ViewPresent';
@@ -27,6 +28,14 @@ const Dashboard = ({ user, setUser }) => {
     }
     setIsLoading(false);
   }, [user.token]);
+
+  const handleCreateGame = () => {
+    setModalState({
+      show: true,
+      mode: 'Create Game',
+      content: <CreateGame user={user} />
+    });
+  }
 
   const handleCheckin = async gameId => {
     await api.gameCheckin(user.token, gameId);
@@ -152,6 +161,7 @@ const Dashboard = ({ user, setUser }) => {
       <div style={{display: 'flex'}}>
         {userContent}
         <div className="dashboard">
+          <button onClick={handleCreateGame}>Create Game</button>
           <p>My Games</p>
           {gameContent}
         </div>

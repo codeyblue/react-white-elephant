@@ -141,7 +141,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
         <hr />
         <p>Wrapping:</p>
         <label>
-          <img src={`http://localhost:8080/${presentData.wrapping}`} alt='wrapping' />
+          {type === 'update' && <img src={`http://localhost:8080/${presentData.wrapping}`} alt='wrapping' /> }
           <input type='file' name='wrapping' onChange={handleWrapping} />
         </label>
         <hr />
@@ -150,7 +150,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
           return <div key={`item-${i}`}>
             <label>
               Description
-              <input class='edit-description' type='text' name='description' value={item.description || ''} onChange={e => handleChange(i, e)} />
+              <input className='edit-description' type='text' name='description' value={item.description || ''} onChange={e => handleChange(i, e)} />
               {
                 items.length > 1 ? <button type='button' onClick={() => handleRemoveItem(item.id)}>X</button> : null
               }
@@ -161,7 +161,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
             </label>
             <label>
               Image
-              {item.image && 
+              {item.image && type === 'update' &&
                 <img src={`http://localhost:8080/${item.image}`} alt='item' />
               }
               <input type='file' name={`${item.id}`} onChange={e => handleItemImageChange(item.id, e)}/>
