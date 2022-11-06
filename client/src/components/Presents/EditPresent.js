@@ -34,13 +34,20 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
   };
 
   const handleItemImageChange = (i, e) => {
+    let newItems = [...items];
     let newImages = [...images];
-    let updateIndex = newImages.find(image => image.id === i);
-    if (updateIndex > -1) {
-      newImages[updateIndex].file = e.target.files[0];
+
+    let updateItemIndex = newItems.findIndex(item => item.id === i);
+    let updateImageIndex = newImages.findIndex(image => image.id === i);
+
+    if (updateImageIndex > -1) {
+      newImages[updateImageIndex].file = e.target.files[0];
     } else {
       newImages.push({id: i, file: e.target.files[0]});
     }
+    newItems[updateItemIndex].image = e.target.files[0].name;
+
+    setItems(newItems);
     setImages(newImages);
   }
 
@@ -66,16 +73,17 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
   };
 
   const postPresent = async () => {
-    let input = {items};
-    if (gameValue !== gameData.id.toString()) {
-      input.game_key = gameValue;
-    }
+    const formData = new FormData();
+    formData.append('items', JSON.stringify(items));
+    images.forEach(image => {
+      formData.append(image.id, image.file);
+    });
 
     try {
-      const response = await fetch(`http://localhost:8080/game/${gameData.id}/present`, {
+      const response = await fetch(`http://localhost:8080/game/${gameValue}/present`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify(input)
+        headers: { 'Authorization': `Bearer ${user.token}` },
+        body: formData
       });
   
       if(!response.ok) {
@@ -89,8 +97,6 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
   };
 
   const updatePresent = async () => {
-    let input = {items};
-
     const formData = new FormData();
     if (gameValue !== gameData.id.toString()) {
       formData.append('game_key', gameValue);

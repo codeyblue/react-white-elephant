@@ -1,10 +1,14 @@
-const {Server} = require('socket.io');
-const restify = require('restify');
-const mysql = require('mysql2');
-const corsMiddleware = require('restify-cors-middleware');
-const config  = require('./config');
 const bcrypt = require('bcryptjs');
+const corsMiddleware = require('restify-cors-middleware');
+const fs = require('fs');
 const jwt = require('jsonwebtoken');
+const mysql = require('mysql2');
+const restify = require('restify');
+const {Server} = require('socket.io');
+
+const config  = require('./config');
+
+const uploads = './uploads';
 
 var cors = corsMiddleware({
   preflightMaxAge: 5,
@@ -32,10 +36,13 @@ server.pre(cors.preflight);
 server.use(cors.actual);
 server.use(restify.plugins.acceptParser(server.acceptable));
 server.use(restify.plugins.queryParser());
+// todo make file upload more secure
 server.use(restify.plugins.bodyParser(
   {
     mapParams: true,
-    mapFiles: true
+    mapFiles: true,
+    uploadDir: `${uploads}/images`,
+    keepExtensions: true
   })
 );
 
@@ -350,11 +357,18 @@ server.get('/game/:id/participants', (req, res, next) => {
 server.post('/game/:id/present', (req, res, next) => {
   console.log(`POST present from user ${req.userData.userId} into game ${req.params.id}`);
   const presentData = req.body;
+  const files = req.files;
+
   if (!presentData.items || presentData.items.length < 1) {
     throw new Error('Present must have at least one item');
   }
 
-  connection.query('SELECT id FROM participants WHERE user_key=? AND game_key=?;SELECT id FROM presents WHERE gifter=? AND game_key=?', [req.userData.userId, req.params.id, req.userData.userId, req.params.id], (error, results, fields) => {
+  const queries = [
+    `SELECT id FROM participants WHERE user_key=${req.userData.userId} AND game_key=${req.params.id};SELECT id FROM presents WHERE gifter=${req.userData.userId} AND game_key=${req.params.id}`,
+    `INSERT INTO presents SET gifter=${req.userData.userId}, status='wrapped',${files.wrapping ? ` wrapping='${files.wrapping.path}',` : ''} game_key=${req.params.id}; SELECT id FROM presents WHERE gifter=${req.userData.userId} AND game_key=${req.params.id}`
+  ]
+
+  connection.query(queries[0], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     if (results[0].length < 1) {
@@ -364,7 +378,7 @@ server.post('/game/:id/present', (req, res, next) => {
       throw new Error('Attempted to add a new present for a game that the user already has a present for');
     }
 
-    connection.query('INSERT INTO presents SET gifter=?, status=?, game_key=?; SELECT id FROM presents WHERE gifter=? AND game_key=?', [req.userData.userId, 'wrapped', req.params.id, req.userData.userId, req.params.id], (err, re, fds) => {
+    connection.query(queries[1], (err, re, fds) => {
       if (err) throw err;
       console.log(re);
       if (re[1].length < 1) {
@@ -372,8 +386,8 @@ server.post('/game/:id/present', (req, res, next) => {
       }
 
       const present_key = re[1][0].id;
-      const items = presentData.items.map(item => `(${present_key}, "${item.description}")`);
-      connection.query(`INSERT INTO present_items (present_key, description) VALUES ${items}`, (e, r, f) => {
+      const items = JSON.parse(presentData.items).map(item => `(${present_key}, "${item.description}", ${item.hyperlink ? `"${item.hyperlink}"` : 'null'}, ${item.image ? `"${files[item.id].path}"` : 'null'})`);
+      connection.query(`INSERT INTO present_items (present_key, description, hyperlink, image) VALUES ${items}`, (e, r, f) => {
         if (e) throw e;
         console.log(r);
         res.send({});
@@ -415,16 +429,25 @@ server.get('/game/:id/present/:pid', (req, res, next) => {
 
 server.del('/game/:id/present/:pid', (req, res, next) => {
   console.log(`DELETE present ${req.params.pid}`);
-  connection.query('SELECT id FROM presents WHERE id=? AND gifter=?', [req.params.pid, req.userData.userId], (error, results, fields) => {
+  connection.query('SELECT id, wrapping FROM presents WHERE id=? AND gifter=?', [req.params.pid, req.userData.userId], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
+
+    const presentData = results[0];
+    const unlinkFiles = [presentData.wrapping];
+
     if (results.length < 1) {
       throw new Error('This user does not have this present');
     }
 
-    connection.query('DELETE FROM present_items WHERE present_key=?;DELETE FROM presents WHERE id=?', [req.params.pid, req.params.pid], (error, results, fields) => {
+    connection.query('SELECT image FROM present_items WHERE present_key=?;DELETE FROM present_items WHERE present_key=?;DELETE FROM presents WHERE id=?', [req.params.pid, req.params.pid, req.params.pid], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
+
+      const presentItems = results[0];
+      unlinkFiles.push(...presentItems.map(item => item.image));
+      unlinkFiles.forEach(file => fs.unlink(file, err => { console.log(err)}));
+
       res.send({});
       next();
     });
@@ -432,20 +455,23 @@ server.del('/game/:id/present/:pid', (req, res, next) => {
 });
 
 server.put('/game/:id/presents/:pid/update', (req, res, next) => {
-  // todo data validation for if someone tries to update nothing
   console.log(`PUT updating present ${req.params.pid}`);
-  console.log(req.files);
   
   const {pid} = req.params;
   const newItems = JSON.parse(req.body.items);
   const changeGame = req.body.game_key;
-  const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId}${newItems ? `;SELECT * FROM present_items WHERE present_key=${pid}` : ''}${changeGame ? `;SELECT id FROM presents WHERE game_key=${changeGame} AND gifter=${req.userData.userId}` : ''}`;
+  const changeWrapping = req.files.wrapping;
+  const files = req.files;
+  const unlinkFiles = [];
+  const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId};SELECT * FROM present_items WHERE present_key=${pid}${changeGame ? `;SELECT id FROM presents WHERE game_key=${changeGame} AND gifter=${req.userData.userId}` : ''}`;
 
   connection.query(firstQuery, (error, results, fields) => {
     if (error) throw error;
 
+    const presentData = results[0];
+
     console.log(results);
-    if (results[0].length < 1) throw new Error('Attempted to change a present that either does not exist or was not gifted by this user.');
+    if (presentData.length < 1) throw new Error('Attempted to change a present that either does not exist or was not gifted by this user.');
     if (results[2] && results[2].length > 0) throw new Error('Cannot move present, this user already has a present for this game');
     
     const secondQuery = [];
@@ -456,15 +482,28 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
 
       if (presentItems.length > 0) {
         let deletedItems = presentItems.filter(item => !newItems.map(i => i.id).includes(item.id));
-        let updatedItems = newItems.filter(item => presentItems.filter(i => (i.id === item.id) && ((i.description !== item.description)).length > 0 || (i.hyperlink !== item.hyperlink)));
+
+        let updatedItems = newItems.filter(item =>
+          presentItems.filter(i =>
+            (i.id === item.id) && (
+              (i.description !== item.description) ||
+              (i.hyperlink !== item.hyperlink) ||
+              item.image
+            )
+          ).length > 0
+        );
+
+        let changedImages = presentItems.filter(i => updatedItems.filter(item => item.id === i.id && item.image).length > 0);
+        unlinkFiles.push(...changedImages.map(i => i.image));
+
         let addedItems = newItems.filter(item => (typeof item.id === 'string') && (item.id.includes('new')));
 
         if (deletedItems.length > 0) {
           secondQuery.push(`DELETE FROM present_items WHERE id IN (${deletedItems.map(item => item.id).join()})`);
         }
 
-        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}', '${item.hyperlink}')`).join() : '';
-        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}', '${item.hyperlink}')`).join() : '';
+        updatedItems = updatedItems ? updatedItems.map(item => `(${item.id}, ${pid}, '${item.description}', ${item.hyperlink ? `'${item.hyperlink}'` : 'null'}, ${item.image ? `'${files[item.id].path}'` : presentItems.find(i => i.id === item.id).image ? `'${presentItems.find(i => i.id === item.id).image}'` : 'null'})`).join() : '';
+        addedItems = addedItems ? addedItems.map(item => `(null, ${pid}, '${item.description}', '${item.hyperlink}', '${files[item.id].path}')`).join() : '';
 
         if (updatedItems || addedItems) {
           values = `${updatedItems}${updatedItems && addedItems ? ',' : ''}${addedItems}`;
@@ -474,20 +513,32 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
       }
 
       if (values) {
-        secondQuery.push(`INSERT INTO present_items (id, present_key, description, hyperlink) VALUES ${values} AS \`item\` ON DUPLICATE KEY UPDATE description=item.description, hyperlink=item.hyperlink`);
+        secondQuery.push(`INSERT INTO present_items (id, present_key, description, hyperlink, image) VALUES ${values} AS \`item\` ON DUPLICATE KEY UPDATE description=item.description, hyperlink=item.hyperlink, image=item.image`);
       }
     }
 
-    if (changeGame) {
-      secondQuery.push(changeGame !== undefined ? `UPDATE presents SET game_key=${req.body.game_key} WHERE id=${pid}` : '');
+    if (changeGame || changeWrapping) {
+      secondQuery.push(`UPDATE presents SET ${changeGame ? `game_key=${changeGame}` : ''}${changeGame && changeWrapping ? ',' : ''}${changeWrapping ? `wrapping='${changeWrapping.path}'`: ''} WHERE id=${pid}`);
+      unlinkFiles.push(changeWrapping ? presentData[0].wrapping : null);
     }
 
-    connection.query(secondQuery.join(';'), (error, results, fields) => {
-      if (error) throw error;
-      console.log(results);
+    if (secondQuery.length < 1) {
+      console.log('Nothing to see here');
       res.send({});
       next();
-    });
+    } else {
+      connection.query(secondQuery.join(';'), (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+
+        unlinkFiles.forEach(file => fs.unlink(file, err => {
+          console.log(err);
+        }));
+
+        res.send({});
+        next();
+      });
+    }
   });
 });
 
