@@ -141,7 +141,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
         <hr />
         <p>Wrapping:</p>
         <label>
-          <img src={`http://localhost:8080/${presentData.wrapping}`} />
+          <img src={`http://localhost:8080/${presentData.wrapping}`} alt='wrapping' />
           <input type='file' name='wrapping' onChange={handleWrapping} />
         </label>
         <hr />
@@ -162,7 +162,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
             <label>
               Image
               {item.image && 
-                <img src={`http://localhost:8080/${item.image}`} />
+                <img src={`http://localhost:8080/${item.image}`} alt='item' />
               }
               <input type='file' name={`${item.id}`} onChange={e => handleItemImageChange(item.id, e)}/>
             </label>

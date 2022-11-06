@@ -71,8 +71,8 @@ io.on('connection', socket => {
     const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}, user_key=${req.user}`;
     const updatePresent = `UPDATE presents SET status='open', holder=${req.user} WHERE id=${req.present}`;
     const updateParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.user}`;
-    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
-    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
+    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getMaxPresentSteals = `SELECT rule_maxstealsperpresent FROM games WHERE id=${socket.game}`
     connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getMaxPresentSteals}`,
@@ -198,8 +198,8 @@ io.on('connection', socket => {
     const updateFromParticipant = `UPDATE participants SET current_present_key=null WHERE user_key=${req.from}`;
     const updateToParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.to}`;
     const updateGame = `UPDATE games SET last_stolen_present=${req.present} WHERE id=${socket.game}`;
-    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
-    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
+    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGameData = `SELECT * FROM games WHERE id=${socket.game}`
     connection.query(`${updatePresent};${updateHistory};${updateFromParticipant};${updateToParticipant};${updateGame};${getPresentData};${getPresentItems};${getParticipantData};${getGameData}`,
@@ -223,8 +223,8 @@ io.on('connection', socket => {
     const updateSwappeePresent = `UPDATE presents SET holder=${req.swapper.user},status='locked' WHERE id=${req.swappee.present}`;
     const updateSwapperParticipant = `UPDATE participants SET current_present_key=${req.swappee.present} WHERE user_key=${req.swapper.user}`;
     const updateSwappeeParticipant = `UPDATE participants SET current_present_key=${req.swapper.present} WHERE user_key=${req.swappee.user}`;
-    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
-    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
+    const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
+    const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGameData = `SELECT * FROM games WHERE id=${socket.game}`;
     connection.query(`${updateSwapperHistory};${updateSwappeeHistory};${updateSwapperPresent};${updateSwappeePresent};${updateSwapperParticipant};${updateSwappeeParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getGameData}`,
@@ -413,8 +413,8 @@ server.post('/game/:id/present', (req, res, next) => {
 
 server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
-  const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${req.params.id}`;
-  const getPresentItems = `SELECT presents.id AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${req.params.id} AND presents.status IN ('open', 'locked')`
+  const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${req.params.id}`;
+  const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${req.params.id} AND presents.status IN ('open', 'locked')`
   const getMaxPresentSteals = `SELECT rule_maxstealsperpresent FROM games WHERE id=${req.params.id}`;
   connection.query(
     `${getPresentData};${getPresentItems};${getMaxPresentSteals}`,
@@ -433,7 +433,7 @@ server.get('/game/:id/presents', (req, res, next) => {
 
 server.get('/game/:id/present/:pid', (req, res, next) => {
   console.log(`GET present ${req.params.pid}`);
-  connection.query('SELECT presents.* AS pid, present_items.id AS id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
+  connection.query('SELECT presents.*, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     if (results.length < 1) {
@@ -446,14 +446,16 @@ server.get('/game/:id/present/:pid', (req, res, next) => {
 
 server.del('/game/:id/present/:pid', (req, res, next) => {
   console.log(`DELETE present ${req.params.pid}`);
-  connection.query('SELECT id, wrapping FROM presents WHERE id=? AND gifter=?', [req.params.pid, req.userData.userId], (error, results, fields) => {
+  connection.query('SELECT status FROM games WHERE id=?;SELECT id, wrapping FROM presents WHERE id=? AND gifter=?', [req.params.id,req.params.pid, req.userData.userId], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
 
-    const presentData = results[0];
+    const gameStatus = results[0];
+    const presentData = results[1];
     const unlinkFiles = [presentData.wrapping];
 
-    if (results.length < 1) {
+    if (!['setup', 'ready'].includes(gameStatus)) { throw new Error ('Attempted to delete a present for a game that is not in setup or ready status')};
+    if (presentData.length < 1) {
       throw new Error('This user does not have this present');
     }
 
@@ -480,21 +482,22 @@ server.put('/game/:id/presents/:pid/update', (req, res, next) => {
   const changeWrapping = req.files.wrapping;
   const files = req.files;
   const unlinkFiles = [];
-  const firstQuery = `SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId};SELECT * FROM present_items WHERE present_key=${pid}${changeGame ? `;SELECT id FROM presents WHERE game_key=${changeGame} AND gifter=${req.userData.userId}` : ''}`;
+  const firstQuery = `SELECT status FROM games WHERE id=${req.params.id};SELECT * FROM presents WHERE id=${pid} AND gifter=${req.userData.userId};SELECT * FROM present_items WHERE present_key=${pid}${changeGame ? `;SELECT id FROM presents WHERE game_key=${changeGame} AND gifter=${req.userData.userId}` : ''}`;
 
   connection.query(firstQuery, (error, results, fields) => {
     if (error) throw error;
 
-    const presentData = results[0];
+    const presentData = results[1];
 
     console.log(results);
+    if (!['setup', 'ready'].includes(results[0][0])) throw new Error('Attempted to edit a present for a game that is not in setup or ready status');
     if (presentData.length < 1) throw new Error('Attempted to change a present that either does not exist or was not gifted by this user.');
-    if (results[2] && results[2].length > 0) throw new Error('Cannot move present, this user already has a present for this game');
+    if (results[3] && results[3].length > 0) throw new Error('Cannot move present, this user already has a present for this game');
     
     const secondQuery = [];
     
     if (newItems) {
-      const presentItems = results[1];
+      const presentItems = results[2];
       let values = '';
 
       if (presentItems.length > 0) {
@@ -605,9 +608,10 @@ const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
   uniquePresents.forEach(id => {
     const present = history.find(p => p.id === id); // grabs a single instance of the history for the base present data
     let events = history.filter(event => event.id === id);
-    events = events ? events.map(e => { return { event: e.event, user: e.user_key }}) : null;
+    events = events ? events.map(e => { return { event: e.event, user: e.user_key, timestamp: e.timestamp }}) : null;
     const steals = events.filter(e => e.event === 'steal');
     const items = itemData ? itemData.filter(item => item.pid === id) : null;
+    console.log(items, itemData)
     tempPresents.push({
       id,
       items: items && items.length > 0 ? transformPresentData(items).items : null,
@@ -625,11 +629,10 @@ const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
 
 const transformPresentData = (data) => {
   console.log(data);
-  const {gifter, status, holder, game_key, wrapping} = data[0];
+  const {id, gifter, status, holder, game_key, wrapping} = data[0];
   const presentdata = {
-    id: data[0].pid,
-    gifter, status, holder, game_key, wrapping,
-    items: data.map(item => { return {id: item.id, description: item.item_description, hyperlink: item.item_hyperlink, image: item.item_image}})
+    id, gifter, status, holder, game_key, wrapping,
+    items: data.map(item => { return {id: item.item_id, description: item.item_description, hyperlink: item.item_hyperlink, image: item.item_image}})
   };
 
   return presentdata;

@@ -10,7 +10,7 @@ const Present = props => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const giftedPresentClass = !['inprogress', 'final_round'].includes(gameStatus) && data.gifter === currentParticipant.user_key ?
+  const giftedPresentClass = !['inprogress', 'final_round'].includes(gameStatus) && currentParticipant && data.gifter === currentParticipant.user_key ?
     'gifted' : '';
   const holdingPresentClass = data.holder === currentParticipant && currentParticipant.user_key ? 'holding' : '';
 
@@ -56,14 +56,14 @@ const Present = props => {
       setModalState({
         show: true,
         header: '',
-        content: <ViewPresent presentData={present} gameData={{id: gameId, status: gameStatus}} setModalState={setModalState} user={user} />
+        content: <ViewPresent mode='dashboard' presentData={present} gameData={{id: gameId, status: gameStatus}} setModalState={setModalState} user={user} />
       });
     } else if (isActiveParticipant && gameStatus === 'inprogress' && data.status === 'wrapped') {
       setModalState({
         show: true,
         header: '',
         content: <div>
-            <img src={`http://localhost:8080/${data.wrapping}`} />
+            <img src={`http://localhost:8080/${data.wrapping}`} alt='wrapping' />
             <button onClick={() => openPresent(data.id)}>Open</button>
           </div>
       });
@@ -75,11 +75,11 @@ const Present = props => {
           <ViewPresent presentData={data} gameData={{id: gameId, status: gameStatus}} setModalState={setModalState} user={user} />
           <div>
             History:
-            {data.history.map(event => {
+            {data.history.sort((a, b) => { return new Date(a.timestamp) - new Date(b.timestamp) }).map(event => {
               let eventText;
               switch (event.event) {
                 case 'open':
-                  eventText = <p>Openned by {`${event.user}`}</p>;
+                  eventText = <p>Opened by {`${event.user}`}</p>;
                   break;
                 case 'steal':
                   eventText = <p>Stolen by {`${event.user}`}</p>;
@@ -130,7 +130,7 @@ const Present = props => {
   switch (data.status) {
     case 'wrapped':
       presentContent = <div style={{flexGrow: 1}} id={`present-${data.id}`} className={`wrapped-present ${giftedPresentClass}`} onClick={handleClick}>
-        <img src={`http://localhost:8080/${data.wrapping}`} />
+        <img src={`http://localhost:8080/${data.wrapping}`} alt='wrapping' />
       </div>
       break;
     case 'open':

@@ -8,7 +8,7 @@ const ViewPresent = ({ presentData, gameData, setModalState, user, games, mode }
     }
     return <div className='present-item' key={`item-${item.id}`}>
       {item.image &&
-        <img src={`http://localhost:8080/${item.image}`}/>
+        <img src={`http://localhost:8080/${item.image}`} alt='item' />
       }
       {
         (hyperlink &&
@@ -50,10 +50,16 @@ const ViewPresent = ({ presentData, gameData, setModalState, user, games, mode }
     <hr />
     {
       mode === 'dashboard' &&
-      <p>Game {`${gameData.id}`} ({`${gameData.status}`})</p> &&
-      <img src={`http://localhost:8080/${presentData.wrapping}`} /> &&
-      <button onClick={(e) => handleEditPresent(e)}>Edit</button> &&
-      <button onClick={(e) => handleDeletePresent(e)}>Delete</button>
+      <>
+        <p>Game {`${gameData.id}`} ({`${gameData.status}`})</p>
+        <img src={`http://localhost:8080/${presentData.wrapping}`} alt='wrapping' />
+        {['setup', 'ready'].includes(gameData.status) &&
+          <>
+            <button onClick={(e) => handleEditPresent(e)}>Edit</button>
+            <button onClick={(e) => handleDeletePresent(e)}>Delete</button>
+          </>
+        }
+      </>
     }
     {items}
   </>;
