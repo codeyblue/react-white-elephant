@@ -124,7 +124,7 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
   };
 
   return (
-    <div key='Edit Present'>
+    <div key='Edit Present' className='edit-present'>
       <form onSubmit={handleSubmit}>
         {
           (games && games.length > 1 && games.filter(game => !game.present).length > 0 &&
@@ -138,11 +138,19 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
           </label>) ||
             <p>Game {gameData.id} ({gameData.status})</p>
         }
+        <hr />
+        <p>Wrapping:</p>
+        <label>
+          <img src={`http://localhost:8080/${presentData.wrapping}`} />
+          <input type='file' name='wrapping' onChange={handleWrapping} />
+        </label>
+        <hr />
+        <p>Items:</p>
         {items.map((item, i) => {
           return <div key={`item-${i}`}>
             <label>
               Description
-              <input type='text' name='description' value={item.description || ''} onChange={e => handleChange(i, e)} />
+              <input class='edit-description' type='text' name='description' value={item.description || ''} onChange={e => handleChange(i, e)} />
               {
                 items.length > 1 ? <button type='button' onClick={() => handleRemoveItem(item.id)}>X</button> : null
               }
@@ -153,14 +161,14 @@ const EditPresent = ({ presentData, gameData, user, games }) => {
             </label>
             <label>
               Image
+              {item.image && 
+                <img src={`http://localhost:8080/${item.image}`} />
+              }
               <input type='file' name={`${item.id}`} onChange={e => handleItemImageChange(item.id, e)}/>
             </label>
+            <hr />
           </div>
         })}
-        <label>
-          Wrapping
-          <input type='file' name='wrapping' onChange={handleWrapping} />
-        </label>
         <div>
           <button type='button' onClick={() => handleAddItem()}>Add Item</button>
           <button type='submit'>Submit</button>

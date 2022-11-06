@@ -2,9 +2,19 @@ import EditPresent from './EditPresent';
 
 const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
   const items = presentData.items.map(item => {
-    return <div key={`item-${item.id}`}>
-      <p>{item.description}</p>
-      <p>{item.hyperlink}</p>
+    let hyperlink = item.hyperlink;
+    if (hyperlink && !hyperlink.includes('http')) {
+      hyperlink = `http://${hyperlink}`;
+    }
+    return <div className='present-item' key={`item-${item.id}`}>
+      {item.image &&
+        <img src={`http://localhost:8080/${item.image}`}/>
+      }
+      {
+        (hyperlink &&
+        <a href={hyperlink}>{item.description}</a>) ||
+        <p>{item.description}</p>
+      }
     </div>;
   });
 
@@ -36,6 +46,7 @@ const ViewPresent = ({ presentData, gameData, setModalState, user, games }) => {
   return <>
     <h3>{presentData.name && <p>{`${presentData.name}`}</p>}</h3>
     <p>Game {`${gameData.id}`} ({`${gameData.status}`})</p>
+    <img src={`http://localhost:8080/${presentData.wrapping}`} />
     {items}
     <button onClick={(e) => handleEditPresent(e)}>Edit</button>
     <button onClick={(e) => handleDeletePresent(e)}>Delete</button>

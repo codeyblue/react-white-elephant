@@ -16,3 +16,17 @@
 .gifted {
   background-color: red;
 }
+
+.present-item img {
+  max-width: 25%;
+  max-height: 25%;
+}
+
+.edit-present input[type=text] {
+  width: 95%
+}
+
+.edit-present img {
+  width: 25%;
+  height: 25%
+}

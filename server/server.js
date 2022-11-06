@@ -296,7 +296,7 @@ server.post('/register', (req, res, next) => {
 });
 
 server.use((req, res, next) => {
-  if (req.method === 'OPTIONS' || ['/login', '/register'].includes(req.route.path)) {
+  if (req.method === 'OPTIONS' || ['/login', '/register', '/uploads/images/*'].includes(req.route.path)) {
     return next();
   }
   try {
@@ -416,7 +416,7 @@ server.get('/game/:id/presents', (req, res, next) => {
 
 server.get('/game/:id/present/:pid', (req, res, next) => {
   console.log(`GET present ${req.params.pid}`);
-  connection.query('SELECT presents.*, present_items.id AS pid, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
+  connection.query('SELECT presents.*, present_items.id AS pid, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=? AND presents.id=?', [req.params.id, req.params.pid], (error, results, fields) => {
     if (error) throw error;
     console.log(results);
     if (results.length < 1) {
@@ -580,6 +580,8 @@ server.put('/resetPassword', (req, res, next) => {
   }
 });
 
+server.get('/uploads/images/*', restify.plugins.serveStaticFiles('./uploads/images'));
+
 const transformPresentsData = (itemData, history, maxPresentSteals) => {
   let tempPresents = [];
   const uniquePresents = [...new Set(history.map(present => present.id))];
@@ -604,10 +606,10 @@ const transformPresentsData = (itemData, history, maxPresentSteals) => {
 };
 
 const transformPresentData = (data) => {
-  const {id, gifter, status, holder, game_key} = data[0];
+  const {id, gifter, status, holder, game_key, wrapping} = data[0];
   const presentdata = {
-    id, gifter, status, holder, game_key,
-    items: data.map(item => { return {id: item.pid, description: item.item_description, hyperlink: item.item_hyperlink}})
+    id, gifter, status, holder, game_key, wrapping,
+    items: data.map(item => { return {id: item.pid, description: item.item_description, hyperlink: item.item_hyperlink, image: item.item_image}})
   };
 
   return presentdata;
