@@ -27,7 +27,7 @@ const Present = props => {
       return;
     }
 
-    const lock = present.history.filter(h => h.event === 'steal').length + 1 >= maxPresentSteal;
+    const lock = maxPresentSteal > -1 ? present.history.filter(h => h.event === 'steal').length + 1 >= maxPresentSteal : false;
 
     const previousHolder = present.holder;
     socket.emit('steal-present', { present: present.id, from: previousHolder, to: currentParticipant.user_key, lock });

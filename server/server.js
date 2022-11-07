@@ -342,7 +342,7 @@ server.post('/game', (req, res, next) => {
   };
   const participants = JSON.parse(body.participants);
 
-  if (gameData.maxPresentSteals === 'null' && gameData.maxRoundSteals === 'null') {
+  if (gameData.maxPresentSteals === -1 && gameData.maxRoundSteals === -1) {
     // maybe add max present steals per round vs per game
     throw new Error('Must pust some restraint on the game');
   }
@@ -671,7 +671,7 @@ const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
       status: present.status,
       holder: present.holder,
       wrapping: present.wrapping, 
-      maxSteals: steals ? steals.length >= maxPresentSteals : false,
+      maxSteals: maxPresentSteals > -1 && steals ? steals.length >= maxPresentSteals : false,
       history: events
     });
   });
