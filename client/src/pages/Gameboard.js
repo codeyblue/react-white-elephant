@@ -261,6 +261,7 @@ const Gameboard = ({ socket, user }) => {
           currentParticipant={currentParticipant}
           user={user}
           setModalState={setModalState}
+          round={game.round}
           />
         <ParticipantList
           gameId={id}

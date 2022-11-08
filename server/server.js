@@ -67,8 +67,8 @@ io.on('connection', socket => {
   socket.emit('connection', null);
 
   socket.on('open-present', req => {
-    console.log(`User ${req.user} opened present ${req.present}`);
-    const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}, user_key=${req.user}`;
+    console.log(`User ${req.user} opened present ${req.present} in round ${req.round} of game ${socket.game}`);
+    const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}, user_key=${req.user}, round=${req.round}`;
     const updatePresent = `UPDATE presents SET status='open', holder=${req.user} WHERE id=${req.present}`;
     const updateParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.user}`;
     const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
@@ -200,8 +200,8 @@ io.on('connection', socket => {
   });
 
   socket.on('steal-present', req => {
-    console.log(`User ${req.to} stole present ${req.present} from ${req.from}`);
-    const updateHistory = `INSERT INTO game_history SET event='steal', present_key=${req.present}, game_key=${socket.game}, user_key=${req.to}`;
+    console.log(`User ${req.to} stole present ${req.present} from ${req.from} in round ${req.round} for game ${socket.game}`);
+    const updateHistory = `INSERT INTO game_history SET event='steal', present_key=${req.present}, game_key=${socket.game}, user_key=${req.to}, round=${req.round}`;
     const updatePresent = `UPDATE presents SET holder=${req.to}${req.locked ? `, status='locked'` : ``} WHERE id=${req.present}`;
     const updateFromParticipant = `UPDATE participants SET current_present_key=null WHERE user_key=${req.from}`;
     const updateToParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.to}`;
@@ -225,9 +225,9 @@ io.on('connection', socket => {
   });
 
   socket.on('swap-presents', req => {
-    console.log(`User ${req.swapper.user} swapped presents with ${req.swappee.user}. Present ${req.swapper.present} and ${req.swappee.present}`);
-    const updateSwapperHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swapper.present}, game_key=${socket.game}, user_key=${req.swapper.user}`;
-    const updateSwappeeHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swappee.present}, game_key=${socket.game}, user_key=${req.swapper.user}`;
+    console.log(`User ${req.swapper.user} swapped presents with ${req.swappee.user}: present ${req.swapper.present} and ${req.swappee.present} in round ${req.round} for game ${socket.game}`);
+    const updateSwapperHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swapper.present}, game_key=${socket.game}, user_key=${req.swapper.user}, round=${req.round}`;
+    const updateSwappeeHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swappee.present}, game_key=${socket.game}, user_key=${req.swapper.user}, round=${req.round}`;
     const updateSwapperPresent = `UPDATE presents SET holder=${req.swappee.user} WHERE id=${req.swapper.present}`;
     const updateSwappeePresent = `UPDATE presents SET holder=${req.swapper.user},status='locked' WHERE id=${req.swappee.present}`;
     const updateSwapperParticipant = `UPDATE participants SET current_present_key=${req.swappee.present} WHERE user_key=${req.swapper.user}`;

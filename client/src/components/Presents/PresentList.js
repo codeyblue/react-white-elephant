@@ -3,7 +3,7 @@ import Present from './Present';
 import './Present.css';
 
 const PresentList = props => {
-  const { gameId, maxPresentSteal, gameStatus, presents, setPresents, socket, pickNextParticipant, lastStolenPresent, user, setModalState } = props;
+  const { gameId, round, maxPresentSteal, gameStatus, presents, setPresents, socket, pickNextParticipant, lastStolenPresent, user, setModalState } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -48,6 +48,7 @@ const PresentList = props => {
           setModalState={setModalState}
           gameId={gameId}
           user={user}
+          round={round}
           />
       );
     presentContent = <div key='Present List'>{transformedPresents}</div>

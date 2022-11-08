@@ -6,7 +6,7 @@ import ViewPresent from './ViewPresent';
 import './Present.css';
 
 const Present = props => {
-  const { gameStatus, gameId, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState, user } = props;
+  const { gameStatus, gameId, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState, user, round } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -16,7 +16,7 @@ const Present = props => {
 
   const openPresent = id => {
     console.log('Opening Present...');
-    socket.emit('open-present', { present: id, user: currentParticipant.user_key });
+    socket.emit('open-present', { present: id, user: currentParticipant.user_key, round });
     pickNextParticipant('open');
     setModalState({show: false, header: '', content: null});
   };
@@ -30,7 +30,7 @@ const Present = props => {
     const lock = maxPresentSteal > -1 ? present.history.filter(h => h.event === 'steal').length + 1 >= maxPresentSteal : false;
 
     const previousHolder = present.holder;
-    socket.emit('steal-present', { present: present.id, from: previousHolder, to: currentParticipant.user_key, lock });
+    socket.emit('steal-present', { present: present.id, from: previousHolder, to: currentParticipant.user_key, lock, round });
     pickNextParticipant('steal', previousHolder);
     setModalState({show: false, header: '', content: null});
   }
@@ -38,7 +38,7 @@ const Present = props => {
   const swapPresents = present => {
     console.log('Swapping Presents...');
     socket.emit('swap-presents', {
-      swapper: { user: currentParticipant.user_key, present: currentParticipant.current_present_key },
+      swapper: { user: currentParticipant.user_key, present: currentParticipant.current_present_key, round },
       swappee: { user: present.holder, present: present.id }
     });
     pickNextParticipant('steal', present.holder);

@@ -4,6 +4,7 @@ CREATE TABLE `game_history` (
   `event` enum('open','steal','lock','swap') DEFAULT NULL,
   `present_key` int DEFAULT NULL,
   `user_key` int DEFAULT NULL,
+  `round` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`game_key`) REFERENCES `games` (`id`),
   FOREIGN KEY (`present_key`) REFERENCES `presents` (`id`),
