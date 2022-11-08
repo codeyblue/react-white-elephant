@@ -74,16 +74,16 @@ io.on('connection', socket => {
     const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
     const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
-    const getMaxPresentSteals = `SELECT rule_maxstealsperpresent FROM games WHERE id=${socket.game}`
-    connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getMaxPresentSteals}`,
+    const getRules = `SELECT rule_maxstealsperpresent, rule_rule_maxstealsperround FROM games WHERE id=${socket.game}`
+    connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getRules}`,
       (error, results, fields) => {
         if (error) throw error;
         console.log(results);
         const presentData = results[3];
         const itemData = results[4];
         const participants = results[5];
-        const maxSteals = results[6][0].rule_maxstealsperpresent;
-        const data = {participants, presents: transformPresentHistoryData(presentData, maxSteals, itemData)}
+        const rules = getGameRules(results[6][0]);
+        const data = {participants, presents: transformPresentHistoryData(presentData, rules, itemData)}
         io.in(socket.game).emit('present-opened', data);
     });
   });
@@ -101,8 +101,12 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getPresents};${getParticipants};${getGame}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      const presents = transformPresentHistoryData(results[4], results[6][0].rule_maxstealsperpresent);
-      io.in(socket.game).emit('game-restarted', {presents, participants: results[5], game: results[6][0]});
+      const presentData = results[4];
+      const participants = results[5];
+      const game = transformGameData(results[6][0]);
+      const {rules} = game;
+      const presents = transformPresentHistoryData(presentData, rules);
+      io.in(socket.game).emit('game-restarted', {presents, participants, game});
     });
   });
 
@@ -119,7 +123,11 @@ io.on('connection', socket => {
     connection.query(`${updateHistory};${updatePresents};${updateParticipants};${updateGame};${getGame};${getPresents};${getParticipants}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('game-reset', { game: results[4][0], presents: transformPresentHistoryData(results[5], results[4][0].rule_maxstealsperpresent), participants: results[6] });
+      const game = transformGameData(results[4][0]);
+      const presentData = results[5];
+      const participants = results[6];
+      const rules = getGameRules(game);
+      io.in(socket.game).emit('game-reset', { game, presents: transformPresentHistoryData(presentData, rules), participants });
     });
   });
 
@@ -130,7 +138,7 @@ io.on('connection', socket => {
     connection.query(`${queryString};${getGame}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('active-participant-set', results[1][0]);
+      io.in(socket.game).emit('active-participant-set', transformGameData(results[1][0]));
     });
   });
 
@@ -139,7 +147,7 @@ io.on('connection', socket => {
     connection.query('UPDATE games SET status=?,active_participant=null where id=?;SELECT * FROM games WHERE id=?', ['complete', socket.game, socket.game], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('game-complete', results[1][0]);
+      io.in(socket.game).emit('game-complete', transformGameData(results[1][0]));
     });
   });
 
@@ -148,7 +156,7 @@ io.on('connection', socket => {
     connection.query('UPDATE games SET status=? WHERE id=?;SELECT * FROM games WHERE id=?', ['ready', socket.game, socket.game], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('game-ready', results[1][0]);
+      io.in(socket.game).emit('game-ready', transformGameData(results[1][0]));
     });
   });
 
@@ -163,7 +171,7 @@ io.on('connection', socket => {
     connection.query(`${setParticipants};${setGame};${getParticipants};${getGame}`, (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        io.in(socket.game).emit('game-started', {participants: results[2], game: results[3][0]});
+        io.in(socket.game).emit('game-started', {participants: results[2], game: transformGameData(results[3][0])});
       });
   });
 
@@ -172,7 +180,7 @@ io.on('connection', socket => {
     connection.query('UPDATE games SET status=? where id=?;SELECT * FROM games WHERE id=?', ['final_round', socket.game, socket.game], (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('final-round-set', results[1][0]);
+      io.in(socket.game).emit('final-round-set', transformGameData(results[1][0]));
     });
   });
 
@@ -187,7 +195,7 @@ io.on('connection', socket => {
     connection.query(`${setParticipants};${setActive};${getParticipants};${getGame}`, (error, results, fields) => {
         if (error) throw error;
         console.log(results);
-        io.in(socket.game).emit('participant-turns-set', {participants: results[2], game: results[3][0]});
+        io.in(socket.game).emit('participant-turns-set', {participants: results[2], game: transformGameData(results[3][0])});
       });
   });
 
@@ -209,8 +217,9 @@ io.on('connection', socket => {
         const presentData = results[5];
         const itemData = results[6];
         const participants = results[7];
-        const game = results[8][0];
-        const presents = transformPresentHistoryData(presentData, game.rule_maxstealsperpresent, itemData);
+        const game = transformGameData(results[8][0]);
+        const {rules} = game;
+        const presents = transformPresentHistoryData(presentData, rules, itemData);
         io.in(socket.game).emit('present-stolen', {presents, participants, game});
     });
   });
@@ -233,8 +242,9 @@ io.on('connection', socket => {
         const presentData = results[6];
         const itemData = results[7];
         const participants = results[8];
-        const game = results[9][0];
-        const presents = transformPresentHistoryData(presentData, game.rule_maxstealsperpresent, itemData);
+        const game = transformGameData(results[9][0]);
+        const {rules} = game;
+        const presents = transformPresentHistoryData(presentData, rules, itemData);
         io.in(socket.game).emit('presents-swapped', { presents, game, participants});
     });
   });
@@ -336,18 +346,18 @@ server.post('/game', (req, res, next) => {
     extraRound: body['extra-round'] === 'on' ? true : false,
     firstPersonChooseAgain: body['first-person-choose-again'] === 'on' ? true : false,
     name: body['game-name'] ? `'${body['game-name']}'` : 'null',
-    maxPresentSteals: body['max-present-steals'] === 'on' && body['max-present-steals-num'] ? body['max-present-steals-num'] : -1,
-    maxRoundSteals: body['max-round-steals'] === 'on' && body['max-round-steals-num'] ? body['max-round-steals-num'] : -1,
+    maxStealPerPresent: body['max-present-steals'] === 'on' && body['max-present-steals-num'] ? body['max-present-steals-num'] : -1,
+    maxStealPerRound: body['max-round-steals'] === 'on' && body['max-round-steals-num'] ? body['max-round-steals-num'] : -1,
     time: body.time ? `'${body.time}'` : 'null'
   };
   const participants = JSON.parse(body.participants);
 
-  if (gameData.maxPresentSteals === -1 && gameData.maxRoundSteals === -1) {
+  if (gameData.maxStealPerPresent === -1 && gameData.maxStealPerRound === -1) {
     // maybe add max present steals per round vs per game
     throw new Error('Must pust some restraint on the game');
   }
 
-  const gameValues = `(${req.userData.userId}, ${gameData.conferenceLink}, ${gameData.date}, ${gameData.extraRound}, ${gameData.firstPersonChooseAgain}, ${gameData.name}, ${gameData.maxPresentSteals}, ${gameData.maxRoundSteals}, ${gameData.time})`;
+  const gameValues = `(${req.userData.userId}, ${gameData.conferenceLink}, ${gameData.date}, ${gameData.extraRound}, ${gameData.firstPersonChooseAgain}, ${gameData.name}, ${gameData.maxStealPerPresent}, ${gameData.maxStealPerRound}, ${gameData.time})`;
 
   connection.query(`INSERT INTO games (administrator, conference_link, date, rule_extraround, rule_firstpersonsecondchance, name, rule_maxstealsperpresent, rule_maxstealsperround, time) VALUES ${gameValues}`,
     (error, results, fields) => {
@@ -385,7 +395,7 @@ server.get('/games/:id', (req, res, next) => {
   connection.query('SELECT * FROM games WHERE id=?', [req.params.id], (error, results, fields) => {
     if (error) throw error;
     console.log(results[0]);
-    res.send(results[0]);
+    res.send(transformGameData(results[0]));
     next();
   });
 });
@@ -457,17 +467,17 @@ server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
   const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${req.params.id}`;
   const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${req.params.id} AND presents.status IN ('open', 'locked')`
-  const getMaxPresentSteals = `SELECT rule_maxstealsperpresent FROM games WHERE id=${req.params.id}`;
+  const getRules = `SELECT rule_maxstealsperpresent, rule_maxstealsperround FROM games WHERE id=${req.params.id}`;
   connection.query(
-    `${getPresentData};${getPresentItems};${getMaxPresentSteals}`,
+    `${getPresentData};${getPresentItems};${getRules}`,
     [req.params.id, req.params.id, req.params.id],
     (error, results, fields) => {
       if (error) throw error;
       console.log(results);
       const presentHistory = results[0];
       const presentItems = results[1];
-      const maxPresentSteal = results[2][0];
-      res.send(transformPresentHistoryData(presentHistory, maxPresentSteal, presentItems));
+      const rules = getGameRules(results[2][0]);
+      res.send(transformPresentHistoryData(presentHistory, rules, presentItems));
       next();
     }
   );
@@ -654,7 +664,24 @@ server.get('/users', (req, res, next) => {
   });
 });
 
-const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
+const getGameRules = (gameData) => {
+  return {
+    maxStealPerPresent: gameData.rule_maxstealsperpresent,
+    maxStealPerRound: gameData.rule_maxstealsperround
+  };
+};
+
+const transformGameData = (gameData) => {
+  const {id, administrator, status, round, active_participant, last_stolen_present, conference_link, date, name, time} = gameData;
+  return {
+    id, administrator, status, round, conference_link, date, name, time,
+    activeParticipant: active_participant,
+    lastStolenPresent: last_stolen_present,
+    rules: getGameRules(gameData)
+  };
+}
+
+const transformPresentHistoryData = (history, rules, itemData) => {
   let tempPresents = [];
   const uniquePresents = [...new Set(history.map(present => present.id))];
   uniquePresents.forEach(id => {
@@ -671,7 +698,7 @@ const transformPresentHistoryData = (history, maxPresentSteals, itemData) => {
       status: present.status,
       holder: present.holder,
       wrapping: present.wrapping, 
-      maxSteals: maxPresentSteals > -1 && steals ? steals.length >= maxPresentSteals : false,
+      maxSteals: rules.maxStealPerPresent > -1 && steals ? steals.length >= rules.maxStealPerPresent : false,
       history: events
     });
   });

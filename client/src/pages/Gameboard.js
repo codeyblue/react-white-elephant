@@ -183,7 +183,7 @@ const Gameboard = ({ socket, user }) => {
       }
       incrementRound = true;
     } else if (action === 'steal') {
-      currentIndex = participants.findIndex(p => p.id === game.active_participant);
+      currentIndex = participants.findIndex(p => p.id === game.activeParticipant);
       nextIndex = participants.findIndex(p => p.user_key === previousHolder);
       if (game.status === 'final_round') {
         const nextUser = participants[nextIndex];
@@ -250,21 +250,21 @@ const Gameboard = ({ socket, user }) => {
       {!isLoading && <>
         <PresentList
           gameId={id}
-          maxPresentSteal={game.rule_maxstealsperpresent}
+          maxPresentSteal={game.rules.maxStealPerPresent}
           gameStatus={game.status}
           pickNextParticipant={pickNextParticipant}
-          activeParticipant={participants.find(p => p.id === game.active_participant)}
+          activeParticipant={participants.find(p => p.id === game.activeParticipant)}
           presents={presents}
           setPresents={setPresents}
           socket={socket}
-          lastStolenPresent={game.last_stolen_present}
+          lastStolenPresent={game.lastStolenPresent}
           currentParticipant={currentParticipant}
           user={user}
           setModalState={setModalState}
           />
         <ParticipantList
           gameId={id}
-          activeParticipant={game.active_participant}
+          activeParticipant={game.activeParticipant}
           setActiveParticipant={setActiveParticipant}
           gameStatus={game.status}
           participants={participants}
