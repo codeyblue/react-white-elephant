@@ -286,7 +286,7 @@ const Gameboard = ({ socket, user }) => {
           </>
         }
         {
-          (game.administrator === user.id || (game.activeParticipant && participants.find(p => p.id === game.activeParticipant).user_key === user.id)) &&
+          (game.administrator === user.id || (game.activeParticipant && participants.find(p => p.id === game.activeParticipant) && participants.find(p => p.id === game.activeParticipant).user_key === user.id)) &&
           game.status === 'final_round' &&
           <button onClick={setGameComplete}>Complete Game</button>
         }

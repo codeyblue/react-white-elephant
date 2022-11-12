@@ -9,6 +9,7 @@ CREATE TABLE `games` (
   `rule_maxstealsperround` int DEFAULT -1,
   `rule_firstpersonsecondchance` bool DEFAULT true,
   `rule_extraround` bool DEFAULT true,
+  `rule_blocklaststolen` bool DEFAULT true,
   `conference_link` varchar(255) DEFAULT null,
   `date` date default null,
   `name` varchar(255) DEFAULT null,

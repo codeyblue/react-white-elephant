@@ -70,13 +70,17 @@ const CreateGame = ({ user }) => {
       <label>
         Rules <br />
         <input type='checkbox' name='max-present-steals' defaultChecked />
-        <label>Maximum Steals Per Persent Per Round</label> 
+        <label>Maximum Steals Per Persent Per Game</label> 
         <input type='number' name='max-present-steals-num' defaultValue='3' min='1' max='30' />
         <br />
         
         <input type='checkbox' name='max-round-steals' />
         <label>Maximum Steals Per Round</label> 
         <input type='number' name='max-round-steals-num' min='1' max='30' />
+        <br />
+
+        <input type='checkbox' name='block-last-stolen' />
+        <label>Don't Allow Stealing a Present Twice in a Row</label>
         <br />
 
 

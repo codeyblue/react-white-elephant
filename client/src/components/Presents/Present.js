@@ -7,7 +7,7 @@ import './Present.css';
 
 const Present = props => {
   const { gameStatus, gameId, rules, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState, user, round } = props;
-  const { maxStealPerPresent, maxStealPerRound } = rules;
+  const { blockLastStolen, maxStealPerPresent, maxStealPerRound } = rules;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -104,9 +104,9 @@ const Present = props => {
               data.holder !== currentParticipant.user_key &&
               gameStatus === 'inprogress' &&
               data.status === 'open' &&
-              lastStolenPresent !== data.id &&
+              (!blockLastStolen || lastStolenPresent !== data.id) &&
               !data.maxSteals &&
-              (maxStealPerRound > -1 && round.steals < maxStealPerRound) &&
+              (maxStealPerRound === -1 || round.steals < maxStealPerRound) &&
               <button onClick={() => stealPresent(data)}>Steal</button>
             )
             ||
