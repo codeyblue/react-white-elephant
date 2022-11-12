@@ -169,7 +169,7 @@ const Gameboard = ({ socket, user }) => {
     let nextIndex = 0;
     let incrementRound = false;
     if (action === 'open') {
-      currentIndex = participants.findIndex(p => p.turn === game.round);
+      currentIndex = participants.findIndex(p => p.turn === game.round.num);
 
       if (currentIndex + 1 < participants.length) {
         nextIndex = currentIndex + 1;

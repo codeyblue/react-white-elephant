@@ -6,7 +6,8 @@ import ViewPresent from './ViewPresent';
 import './Present.css';
 
 const Present = props => {
-  const { gameStatus, gameId, maxPresentSteal, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState, user, round } = props;
+  const { gameStatus, gameId, rules, currentParticipant, activeParticipant, socket, pickNextParticipant, data, lastStolenPresent, setModalState, user, round } = props;
+  const { maxStealPerPresent, maxStealPerRound } = rules;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -27,7 +28,7 @@ const Present = props => {
       return;
     }
 
-    const lock = maxPresentSteal > -1 ? present.history.filter(h => h.event === 'steal').length + 1 >= maxPresentSteal : false;
+    const lock = maxStealPerPresent > -1 ? present.history.filter(h => h.event === 'steal').length + 1 >= maxStealPerPresent : false;
 
     const previousHolder = present.holder;
     socket.emit('steal-present', { present: present.id, from: previousHolder, to: currentParticipant.user_key, lock, round });
@@ -104,6 +105,7 @@ const Present = props => {
               data.status === 'open' &&
               lastStolenPresent !== data.id &&
               !data.maxSteals &&
+              (maxStealPerRound > -1 && round.steals < maxStealPerRound) &&
               <button onClick={() => stealPresent(data)}>Steal</button>
             )
             ||

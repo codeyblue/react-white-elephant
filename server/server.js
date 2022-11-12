@@ -68,13 +68,13 @@ io.on('connection', socket => {
 
   socket.on('open-present', req => {
     console.log(`User ${req.user} opened present ${req.present} in round ${req.round} of game ${socket.game}`);
-    const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}, user_key=${req.user}, round=${req.round}`;
+    const updateHistory = `INSERT INTO game_history SET event='open', present_key=${req.present}, game_key=${socket.game}, user_key=${req.user}, round=${req.round.num}`;
     const updatePresent = `UPDATE presents SET status='open', holder=${req.user} WHERE id=${req.present}`;
     const updateParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.user}`;
     const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
     const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
-    const getRules = `SELECT rule_maxstealsperpresent, rule_rule_maxstealsperround FROM games WHERE id=${socket.game}`
+    const getRules = `SELECT rule_maxstealsperpresent, rule_maxstealsperround FROM games WHERE id=${socket.game}`
     connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getRules}`,
       (error, results, fields) => {
         if (error) throw error;
@@ -134,11 +134,11 @@ io.on('connection', socket => {
   socket.on('set-active-participant', req => {
     console.log(`Setting active participant to ${req.participant} for game ${socket.game}`);
     const queryString = `UPDATE games SET active_participant=${req.participant}${req.incrementRound ? `, round=round+1` : ``},last_stolen_present=null where id=${socket.game}`;
-    const getGame = `SELECT * FROM games WHERE id=${socket.game}`
+    const getGame = `SELECT * FROM games WHERE id=${socket.game};SELECT * FROM game_history WHERE game_key=${socket.game}`
     connection.query(`${queryString};${getGame}`, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('active-participant-set', transformGameData(results[1][0]));
+      io.in(socket.game).emit('active-participant-set', transformGameData(results[1][0], results[2]));
     });
   });
 
@@ -201,7 +201,7 @@ io.on('connection', socket => {
 
   socket.on('steal-present', req => {
     console.log(`User ${req.to} stole present ${req.present} from ${req.from} in round ${req.round} for game ${socket.game}`);
-    const updateHistory = `INSERT INTO game_history SET event='steal', present_key=${req.present}, game_key=${socket.game}, user_key=${req.to}, round=${req.round}`;
+    const updateHistory = `INSERT INTO game_history SET event='steal', present_key=${req.present}, game_key=${socket.game}, user_key=${req.to}, round=${req.round.num}`;
     const updatePresent = `UPDATE presents SET holder=${req.to}${req.locked ? `, status='locked'` : ``} WHERE id=${req.present}`;
     const updateFromParticipant = `UPDATE participants SET current_present_key=null WHERE user_key=${req.from}`;
     const updateToParticipant = `UPDATE participants SET current_present_key=${req.present} WHERE user_key=${req.to}`;
@@ -210,14 +210,15 @@ io.on('connection', socket => {
     const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGameData = `SELECT * FROM games WHERE id=${socket.game}`
-    connection.query(`${updatePresent};${updateHistory};${updateFromParticipant};${updateToParticipant};${updateGame};${getPresentData};${getPresentItems};${getParticipantData};${getGameData}`,
+    const getHistory = `SELECT * FROM game_history WHERE game_key=${socket.game}`;
+    connection.query(`${updatePresent};${updateHistory};${updateFromParticipant};${updateToParticipant};${updateGame};${getPresentData};${getPresentItems};${getParticipantData};${getGameData};${getHistory}`,
       (error, results, fields) => {
         if (error) throw error;
         console.log(results);
         const presentData = results[5];
         const itemData = results[6];
         const participants = results[7];
-        const game = transformGameData(results[8][0]);
+        const game = transformGameData(results[8][0], results[9]);
         const {rules} = game;
         const presents = transformPresentHistoryData(presentData, rules, itemData);
         io.in(socket.game).emit('present-stolen', {presents, participants, game});
@@ -226,8 +227,8 @@ io.on('connection', socket => {
 
   socket.on('swap-presents', req => {
     console.log(`User ${req.swapper.user} swapped presents with ${req.swappee.user}: present ${req.swapper.present} and ${req.swappee.present} in round ${req.round} for game ${socket.game}`);
-    const updateSwapperHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swapper.present}, game_key=${socket.game}, user_key=${req.swapper.user}, round=${req.round}`;
-    const updateSwappeeHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swappee.present}, game_key=${socket.game}, user_key=${req.swapper.user}, round=${req.round}`;
+    const updateSwapperHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swapper.present}, game_key=${socket.game}, user_key=${req.swapper.user}, round=${req.round.num}`;
+    const updateSwappeeHistory = `INSERT INTO game_history SET event='swap', present_key=${req.swappee.present}, game_key=${socket.game}, user_key=${req.swapper.user}, round=${req.round.num}`;
     const updateSwapperPresent = `UPDATE presents SET holder=${req.swappee.user} WHERE id=${req.swapper.present}`;
     const updateSwappeePresent = `UPDATE presents SET holder=${req.swapper.user},status='locked' WHERE id=${req.swappee.present}`;
     const updateSwapperParticipant = `UPDATE participants SET current_present_key=${req.swappee.present} WHERE user_key=${req.swapper.user}`;
@@ -236,13 +237,14 @@ io.on('connection', socket => {
     const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGameData = `SELECT * FROM games WHERE id=${socket.game}`;
-    connection.query(`${updateSwapperHistory};${updateSwappeeHistory};${updateSwapperPresent};${updateSwappeePresent};${updateSwapperParticipant};${updateSwappeeParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getGameData}`,
+    const getHistory = `SELECT * FROM game_history WHERE game_key=${socket.game}`;
+    connection.query(`${updateSwapperHistory};${updateSwappeeHistory};${updateSwapperPresent};${updateSwappeePresent};${updateSwapperParticipant};${updateSwappeeParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getGameData};${getHistory}`,
       (error, results, fields) => {
         if (error) throw error;
         const presentData = results[6];
         const itemData = results[7];
         const participants = results[8];
-        const game = transformGameData(results[9][0]);
+        const game = transformGameData(results[9][0],results[10]);
         const {rules} = game;
         const presents = transformPresentHistoryData(presentData, rules, itemData);
         io.in(socket.game).emit('presents-swapped', { presents, game, participants});
@@ -392,10 +394,10 @@ server.get('/games', (req, res, next) => {
 
 server.get('/games/:id', (req, res, next) => {
   console.log('GET game');
-  connection.query('SELECT * FROM games WHERE id=?', [req.params.id], (error, results, fields) => {
+  connection.query('SELECT * FROM games WHERE id=?;SELECT * FROM game_history WHERE game_key=?', [req.params.id, req.params.id], (error, results, fields) => {
     if (error) throw error;
-    console.log(results[0]);
-    res.send(transformGameData(results[0]));
+    console.log(results);
+    res.send(transformGameData(results[0][0], results[1]));
     next();
   });
 });
@@ -671,13 +673,15 @@ const getGameRules = (gameData) => {
   };
 };
 
-const transformGameData = (gameData) => {
+const transformGameData = (gameData, history) => {
   const {id, administrator, status, round, active_participant, last_stolen_present, conference_link, date, name, time} = gameData;
   return {
-    id, administrator, status, round, conference_link, date, name, time,
+    id, administrator, status, conference_link, date, name, time,
+    round: {num: round, steals: history ? history.filter(h => h.event === 'steal').length : 0},
     activeParticipant: active_participant,
     lastStolenPresent: last_stolen_present,
-    rules: getGameRules(gameData)
+    rules: getGameRules(gameData),
+    history: history ? history : null
   };
 }
 
@@ -707,7 +711,6 @@ const transformPresentHistoryData = (history, rules, itemData) => {
 };
 
 const transformPresentData = (data) => {
-  console.log(data);
   const {id, gifter, status, holder, game_key, wrapping} = data[0];
   const presentdata = {
     id, gifter, status, holder, game_key, wrapping,
