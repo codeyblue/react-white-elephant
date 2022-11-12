@@ -74,7 +74,7 @@ io.on('connection', socket => {
     const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${socket.game}`;
     const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${socket.game} AND presents.status IN ('open', 'locked')`
     const getParticipantData = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
-    const getRules = `SELECT rule_maxstealsperpresent, rule_maxstealsperround FROM games WHERE id=${socket.game}`
+    const getRules = `SELECT rule_extraround, rule_firstpersonsecondchance, rule_maxstealsperpresent, rule_maxstealsperround FROM games WHERE id=${socket.game}`
     connection.query(`${updatePresent};${updateHistory};${updateParticipant};${getPresentData};${getPresentItems};${getParticipantData};${getRules}`,
       (error, results, fields) => {
         if (error) throw error;
@@ -469,7 +469,7 @@ server.get('/game/:id/presents', (req, res, next) => {
   console.log('GET game presents');
   const getPresentData = `SELECT presents.*, game_history.event, game_history.user_key, game_history.timestamp FROM presents LEFT JOIN game_history ON presents.id = game_history.present_key WHERE presents.game_key=${req.params.id}`;
   const getPresentItems = `SELECT presents.id AS pid, present_items.id AS item_id, present_items.description AS item_description, present_items.hyperlink AS item_hyperlink, present_items.image AS item_image FROM presents LEFT JOIN present_items ON present_items.present_key = presents.id WHERE presents.game_key=${req.params.id} AND presents.status IN ('open', 'locked')`
-  const getRules = `SELECT rule_maxstealsperpresent, rule_maxstealsperround FROM games WHERE id=${req.params.id}`;
+  const getRules = `SELECT rule_extraround, rule_firstpersonsecondchance, rule_maxstealsperpresent, rule_maxstealsperround FROM games WHERE id=${req.params.id}`;
   connection.query(
     `${getPresentData};${getPresentItems};${getRules}`,
     [req.params.id, req.params.id, req.params.id],
@@ -668,6 +668,8 @@ server.get('/users', (req, res, next) => {
 
 const getGameRules = (gameData) => {
   return {
+    extraRound: gameData.rule_extraround,
+    firstPersonChooseAgain: gameData.rule_firstpersonsecondchance,
     maxStealPerPresent: gameData.rule_maxstealsperpresent,
     maxStealPerRound: gameData.rule_maxstealsperround
   };

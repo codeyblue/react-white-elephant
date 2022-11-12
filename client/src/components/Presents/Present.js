@@ -39,7 +39,8 @@ const Present = props => {
   const swapPresents = present => {
     console.log('Swapping Presents...');
     socket.emit('swap-presents', {
-      swapper: { user: currentParticipant.user_key, present: currentParticipant.current_present_key, round },
+      round,
+      swapper: { user: currentParticipant.user_key, present: currentParticipant.current_present_key },
       swappee: { user: present.holder, present: present.id }
     });
     pickNextParticipant('steal', present.holder);

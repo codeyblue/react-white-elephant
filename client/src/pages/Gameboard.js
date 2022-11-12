@@ -174,7 +174,7 @@ const Gameboard = ({ socket, user }) => {
       if (currentIndex + 1 < participants.length) {
         nextIndex = currentIndex + 1;
       } else {
-        if (game.status === 'final_round') {
+        if (game.status === 'final_round' || !game.rules.firstPersonChooseAgain) {
           setGameComplete();
           return;
         } else {
@@ -187,7 +187,7 @@ const Gameboard = ({ socket, user }) => {
       nextIndex = participants.findIndex(p => p.user_key === previousHolder);
       if (game.status === 'final_round') {
         const nextUser = participants[nextIndex];
-        if (presents.filter(p => p.holder !== nextUser.user_key && p.status !== 'locked').length <= 1) {
+        if (!game.rules.extraRound || presents.filter(p => p.holder !== nextUser.user_key && p.status !== 'locked').length <= 1) {
           console.log('final')
           setGameComplete();
           return;
@@ -250,8 +250,8 @@ const Gameboard = ({ socket, user }) => {
       {!isLoading && <>
         <PresentList
           gameId={id}
-          maxPresentSteal={game.rules.maxStealPerPresent}
           gameStatus={game.status}
+          rules={game.rules}
           pickNextParticipant={pickNextParticipant}
           activeParticipant={participants.find(p => p.id === game.activeParticipant)}
           presents={presents}
@@ -286,7 +286,7 @@ const Gameboard = ({ socket, user }) => {
           </>
         }
         {
-          user.id &&
+          (game.administrator === user.id || (game.activeParticipant && participants.find(p => p.id === game.activeParticipant).user_key === user.id)) &&
           game.status === 'final_round' &&
           <button onClick={setGameComplete}>Complete Game</button>
         }
