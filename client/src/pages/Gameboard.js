@@ -241,7 +241,7 @@ const Gameboard = ({ socket, user }) => {
     <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
     {
       user.id === game.administrator &&
-      <button onClick={() => handleEditGame(game)}>Edit Game</button>
+      <button onClick={() => handleEditGame(game)} disabled={game.status !== 'setup'}>Edit Game</button>
     }
     {
       currentParticipant && !presents.find(present => present.gifter === currentParticipant.user_key) &&

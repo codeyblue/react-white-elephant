@@ -37,6 +37,11 @@ const EditGame = ({ user, gameData, participantList }) => {
   }
 
   const handleSubmit = async (e) => {
+    if (gameData && gameData.status !== 'setup') {
+      alert('Game not in setup mode');
+      return;
+    }
+
     e.preventDefault();
     const form = document.getElementById('new-game');
     const formData = new FormData(form);
@@ -58,7 +63,7 @@ const EditGame = ({ user, gameData, participantList }) => {
 
   return (
     <form id='new-game' onSubmit={handleSubmit}>
-      {console.log(participants)}
+      {gameData && <p>{gameData.status}</p>}
       <label>
         Game Name (optional)
         <input name='game-name' type='text' default={gameData ? gameData.name : null} />
@@ -127,7 +132,7 @@ const EditGame = ({ user, gameData, participantList }) => {
         })}
       </label>
       <br />
-      <button type='submit'>Submit</button>
+      <button type='submit' disabled={gameData ? gameData.status !== 'setup' : false}>Submit</button>
     </form>
   );
 };

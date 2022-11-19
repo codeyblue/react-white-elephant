@@ -145,7 +145,7 @@ const Dashboard = ({ user, setUser }) => {
           {game.administrator === user.id && 
             <>
               (a)
-              <button onClick={() => handleUpdateGame(game.id)}>Edit Game</button>
+              <button onClick={() => handleUpdateGame(game.id)} disabled={game.status !== 'setup'}>Edit Game</button>
             </>
           }
           {!game.present && <button onClick={() => handleAddPresent(game)}>Add a present</button>}
