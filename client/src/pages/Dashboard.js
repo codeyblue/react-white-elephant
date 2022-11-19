@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import api from '../common/api';
-import CreateGame from '../components/Game/CreateGame';
+import EditGame from '../components/Game/EditGame';
 import Modal from '../components/Modal/Modal';
 import EditPresent from '../components/Presents/EditPresent';
 import ViewPresent from '../components/Presents/ViewPresent';
@@ -33,9 +33,19 @@ const Dashboard = ({ user, setUser }) => {
     setModalState({
       show: true,
       mode: 'Create Game',
-      content: <CreateGame user={user} />
+      content: <EditGame user={user} />
     });
   }
+
+  const handleUpdateGame = async id => {
+    const gameData = (await api.fetchGame(user.token, id)).data;
+    const participants = (await api.fetchParticipants(user.token, id)).data;
+    setModalState({
+      show: true,
+      mode: 'Update Game',
+      content: <EditGame user={user} gameData={gameData} participantList={participants} />
+    });
+  };
 
   const handleCheckin = async gameId => {
     await api.gameCheckin(user.token, gameId);
@@ -132,7 +142,12 @@ const Dashboard = ({ user, setUser }) => {
       games.map(game => 
         <div id='game-link' key={`game-${game.id}`}>
           <Link to={`/game/${game.id}`}>{`${game.id}`}</Link>
-          {game.administrator === user.id && '(a)'}
+          {game.administrator === user.id && 
+            <>
+              (a)
+              <button onClick={() => handleUpdateGame(game.id)}>Edit Game</button>
+            </>
+          }
           {!game.present && <button onClick={() => handleAddPresent(game)}>Add a present</button>}
           {game.present && <button onClick={() => handleViewPresent(game, game.present)}>View present</button>}
           {!game.checked_in && <button onClick={() => handleCheckin(game.id)}>Check In</button>}

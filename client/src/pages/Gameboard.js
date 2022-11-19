@@ -5,6 +5,7 @@ import EditPresent from '../components/Presents/EditPresent';
 import ParticipantList from '../components/Participants/ParticipantList';
 import PresentList from '../components/Presents/PresentList';
 import Modal from '../components/Modal/Modal';
+import EditGame from '../components/Game/EditGame';
 
 const Gameboard = ({ socket, user }) => {
   const {id} = useParams();
@@ -220,6 +221,14 @@ const Gameboard = ({ socket, user }) => {
     });
   };
 
+  const handleEditGame = (game) => {
+    setModalState({
+      show: true,
+      mode: 'Edit Game',
+      content: <EditGame user={user} gameData={game} participantList={participants} />
+    })
+  }
+
   return (
     <>
     <Modal
@@ -230,6 +239,10 @@ const Gameboard = ({ socket, user }) => {
         {modalState.content}
     </Modal>
     <p>{`${user.username} - ${user.first_name} ${user.last_name}`}</p>
+    {
+      user.id === game.administrator &&
+      <button onClick={() => handleEditGame(game)}>Edit Game</button>
+    }
     {
       currentParticipant && !presents.find(present => present.gifter === currentParticipant.user_key) &&
       <button onClick={() => handleAddPresent(game)}>Add Present</button>

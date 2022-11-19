@@ -1,4 +1,22 @@
 module.exports = {
+  fetchGame: async (token, id) => {
+    let res = {data: null, error: null};
+    try {
+      const response = await fetch(`http://localhost:8080/games/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+
+      res.data = await response.json();
+      return res;
+    } catch (error) {
+      res.error = error;
+      return res;
+    }
+  },
+
   fetchGames: async token => {
     let res = {data: null, error: null};
     try {
@@ -9,6 +27,23 @@ module.exports = {
         throw new Error('Something went wrong!');
       }
 
+      res.data = await response.json();
+      return res;
+    } catch (error) {
+      res.error = error;
+      return res;
+    }
+  },
+
+  fetchParticipants: async (token, id) => {
+    let res = {data: null, error: null};
+    try {
+      const response = await fetch(`http://localhost:8080/game/${id}/participants`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
       res.data = await response.json();
       return res;
     } catch (error) {
@@ -106,6 +141,24 @@ module.exports = {
   
      await response.json();
      return res;
+    } catch (error) {
+      res.error = error;
+      return res;
+    }
+  },
+
+  putGame: async (token, id, input) => {
+    let res = {error: null};
+    try {
+      const response = await fetch(`http://localhost:8080/games/${id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: input
+      });
+      if(!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+      return res;
     } catch (error) {
       res.error = error;
       return res;

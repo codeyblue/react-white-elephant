@@ -403,6 +403,12 @@ server.get('/games/:id', (req, res, next) => {
   });
 });
 
+server.put('/games/:id', (req, res, next) => {
+  console.log(`PUT game ${req.params.id}`);
+  res.send({});
+  next();
+});
+
 server.put('/game/:id/checkIn', (req, res, next) => {
   console.log(`PUT checking user ${req.userData.userId} into game ${req.params.id}`);
   connection.query('UPDATE participants SET checked_in=1 WHERE game_key=? AND user_key=?', [req.params.id, req.userData.userId], (error, results, fields) => {
