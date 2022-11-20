@@ -123,6 +123,10 @@ const Gameboard = ({ socket, user }) => {
       setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
       setGame(req.game);
     });
+
+    return ()=>{ 
+      socket.disconnect(); 
+     }
   }, [id, user.token, fetchGame, socket, user.id]);
 
   const setGameReady = () => {
@@ -313,10 +317,14 @@ const Gameboard = ({ socket, user }) => {
       <div>
         {
           game.administrator === user.id &&
+          ['setup', 'ready'].includes(game.status) &&
+          <button onClick={resetGame}>Reset Game</button>
+        }
+        {
+          game.administrator === user.id &&
           ['inprogress', 'final_round', 'complete'].includes(game.status) &&
           <>
             <button onClick={restartGame}>Restart Game</button>
-            <button onClick={resetGame}>Reset Game</button>
           </>
         }
         {

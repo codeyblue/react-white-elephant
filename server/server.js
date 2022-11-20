@@ -172,17 +172,46 @@ io.on('connection', socket => {
 
   socket.on('set-game-start', req => {
     console.log(`Setting game ${socket.game} to start state`);
-    let { order } = req;
-    order = order.map(turn => `(${turn.participant}, ${turn.turn}, ${turn.user_key}, ${socket.game})`);
-    const setParticipants = `INSERT INTO participants (id, turn, user_key, game_key) VALUES ${order.join(',')} AS \`order\` ON DUPLICATE KEY UPDATE turn = \`order\`.turn`;
-    const setGame = `UPDATE games SET status='inprogress',active_participant=${req.order.find(o => o.turn === 0).participant},round=0 WHERE id=${socket.game}`;
-    const getParticipants = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
     const getGame = `SELECT * FROM games where id=${socket.game}`;
-    connection.query(`${setParticipants};${setGame};${getParticipants};${getGame}`, (error, results, fields) => {
+    const getParticipants = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
+    const getPresents = `SELECT * FROM presents WHERE game_key=${socket.game}`;
+
+    connection.query(`${getGame};${getParticipants};${getPresents}`, (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      let game = results[0][0];
+      let participants = results[1];
+      let presents = results[2];
+
+      if (game.status !== 'ready') {
+        throw new Error('Game is not in ready mode')
+      }
+
+      if (participants.length <= 1) {
+        throw new Error('Game must have at least 2 participants');
+      }
+
+      if (
+        participants.length !== presents.length &&
+        !participants.every(pa => { return (presents.filter(pr => pr.gifter === pa.user_key ).length > 0)})) {
+          throw new Error('Not every participant has brought a single present');
+      }
+
+      if (!participants.every(p => p.checked_in)) {
+        throw new Error('Not every participant is checked in');
+      }
+
+      let { order } = req;
+      order = order.map(turn => `(${turn.participant}, ${turn.turn}, ${turn.user_key}, ${socket.game})`);
+      const setParticipants = `INSERT INTO participants (id, turn, user_key, game_key) VALUES ${order.join(',')} AS \`order\` ON DUPLICATE KEY UPDATE turn = \`order\`.turn`;
+      const setGame = `UPDATE games SET status='inprogress',active_participant=${req.order.find(o => o.turn === 0).participant},round=0 WHERE id=${socket.game}`;
+      
+      connection.query(`${setParticipants};${setGame};${getParticipants};${getGame}`, (error, results, fields) => {
         if (error) throw error;
         console.log(results);
         io.in(socket.game).emit('game-started', {participants: results[2], game: transformGameData(results[3][0])});
       });
+    });
   });
 
   socket.on('set-final-round', req => {
@@ -452,7 +481,7 @@ server.put('/games/:id', (req, res, next) => {
         if (
           (date === null && currentData.date !== null) ||
           (date !== null && currentData.date === null) ||
-          (date.getTime() !== currentData.date.getTime())) {
+          ((date && date.getTime()) !== (currentData.date && currentData.date.getTime()))) {
           gameUpdateQuery.push(`date='${pair[1]}'`);
         }
       }
