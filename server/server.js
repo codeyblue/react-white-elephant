@@ -357,7 +357,7 @@ server.post('/game', (req, res, next) => {
 
   if (gameData.maxStealPerPresent === -1 && gameData.maxStealPerRound === -1) {
     // maybe add max present steals per round vs per game
-    throw new Error('Must pust some restraint on the game');
+    throw new Error('Must put some restraint on the game');
   }
 
   const gameValues = `(${req.userData.userId}, ${gameData.conferenceLink}, ${gameData.date}, ${gameData.blockLastStolen}, ${gameData.extraRound}, ${gameData.firstPersonChooseAgain}, ${gameData.name}, ${gameData.maxStealPerPresent}, ${gameData.maxStealPerRound}, ${gameData.time})`;
@@ -405,8 +405,87 @@ server.get('/games/:id', (req, res, next) => {
 
 server.put('/games/:id', (req, res, next) => {
   console.log(`PUT game ${req.params.id}`);
-  res.send({});
-  next();
+  connection.query('SELECT * FROM games WHERE id=? AND administrator=?', [req.params.id, req.userData.userId], (error, results, fields) => {
+    if (error) throw error;
+    console.log(results);
+    const currentData = results[0];
+    if (currentData.length <= 0) {
+      throw new Error('There is no game with this administrator');
+    }
+
+    if (currentData.status !== 'setup') {
+      throw new Error('The game is not in setup mode');
+    }
+
+    let gameUpdateQuery = [];
+
+    const {body} = req;
+    const gameData = {
+      conference_link: body['conference-link'],
+      date: body.date,
+      rule_extraround: body['extra-round'] === 'on' ? 1 : 0,
+      rule_firstpersonsecondchance: body['first-person-choose-again'] === 'on' ? 1 : 0,
+      rule_blocklaststolen: body['block-last-stolen'] === 'on' ? 1 : 0,
+      name: body['game-name'],
+      rule_maxstealsperpresent: body['max-present-steals'] === 'on' && body['max-present-steals-num'] ? Number(body['max-present-steals-num']) : -1,
+      rule_maxstealsperround: body['max-round-steals'] === 'on' && body['max-round-steals-num'] ? Number(body['max-round-steals-num']) : -1,
+      time: body.time
+    };
+
+    Object.entries(gameData).forEach((pair, index) => {
+      if (!['date'].includes(pair[0])) {
+        if (pair[1] !== currentData[pair[0]]) {
+          gameUpdateQuery.push(`${pair[0]}='${pair[1]}'`);
+        }
+      } else {
+        let date = pair[1] ? new Date (`'${pair[1]}'`) : null;
+        if (
+          (date === null && currentData.date !== null) ||
+          (date !== null && currentData.date === null) ||
+          (date.getTime() !== currentData.date.getTime())) {
+          gameUpdateQuery.push(`date='${pair[1]}'`);
+        }
+      }
+    });
+    
+    if (gameUpdateQuery.length > 0) {
+      gameUpdateQuery = `UPDATE games SET ${gameUpdateQuery.join(',')} WHERE id=${req.params.id}`;
+    }
+
+    const participants = JSON.parse(body.participants);
+
+    if (gameData.rule_maxstealsperpresent === -1 && gameData.rule_maxstealsperround === -1) {
+      // maybe add max present steals per round vs per game
+      throw new Error('Must put some restraint on the game');
+    }
+
+    let participantQueries = [];
+    connection.query('SELECT * FROM participants WHERE game_key=?', [req.params.id], (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+
+      const removed = results.filter(r => { return r.user_key !== req.userData.userId && participants.filter(p => r.user_key === p.id).length <= 0});
+      const added = participants.filter(p => { return results.filter(r => r.user_key === p.id).length <= 0});
+
+      if (removed.length > 0) {
+        participantQueries.push(`DELETE FROM participants WHERE user_key IN (${removed.map(r => r.user_key).join()}) AND game_key=${req.params.id}`);
+      }
+
+      if (added.length > 0) {
+        participantQueries.push(`INSERT INTO participants (user_key, game_key) VALUES ${added.map(a => { return `(${a.id}, ${req.params.id})` })}`);
+      }
+
+      if (removed.length <= 0 && added.length <= 0 && gameUpdateQuery.length <= 0) {
+        throw new Error('No updates to be made');
+      }
+      connection.query(`${participantQueries.length > 0 ? participantQueries.join(';') + ';' : ''}${gameUpdateQuery}`, (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+      });
+      res.send({});
+      next();
+    });
+  });
 });
 
 server.put('/game/:id/checkIn', (req, res, next) => {

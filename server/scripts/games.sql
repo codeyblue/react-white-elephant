@@ -11,7 +11,7 @@ CREATE TABLE `games` (
   `rule_extraround` bool DEFAULT true,
   `rule_blocklaststolen` bool DEFAULT true,
   `conference_link` varchar(255) DEFAULT null,
-  `date` date default null,
+  `date` date DEFAULT null,
   `name` varchar(255) DEFAULT null,
   `time` varchar(255) DEFAULT null,
   PRIMARY KEY (`id`),

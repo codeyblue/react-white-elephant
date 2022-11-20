@@ -8,9 +8,9 @@ const EditGame = ({ user, gameData, participantList }) => {
   const getUsers = useCallback(async() => {
     const {data} = await api.fetchUsers(user.token);
     const newUsers = data.filter(u => u.id !== user.id);
-    setUsers(newUsers.filter(u => participantList.filter(p => p.id === u.id).length <= 0));
+    setUsers(newUsers.filter(u => participantList.filter(p => p.user_key === u.id).length <= 0));
     if (participantList) {
-      setParticipants(newUsers.filter(u => { return participantList.filter(p => p.user_key === u.id)}));
+      setParticipants(newUsers.filter(u => { return participantList.filter(p => p.user_key === u.id).length > 0}));
     }
   }, [user.token]);
 
@@ -66,21 +66,21 @@ const EditGame = ({ user, gameData, participantList }) => {
       {gameData && <p>{gameData.status}</p>}
       <label>
         Game Name (optional)
-        <input name='game-name' type='text' default={gameData ? gameData.name : null} />
+        <input name='game-name' type='text' defaultValue={gameData ? gameData.name : null} />
       </label>
       <br />
       <label>
         Day
-        <input name='date' type='date' default={gameData ? gameData.date : null} />
+        <input name='date' type='date' defaultValue={gameData && gameData.date ? new Date(gameData.date).toISOString().split('T')[0] : null} />
       </label>
       <label>
         Time
-        <input name='time' type='time' default={gameData ? gameData.time : null} />
+        <input name='time' type='time' defaultValue={gameData ? gameData.time : null} />
       </label>
       <br />
       <label>
         Conference Link
-        <input name='conference-link' type='url' default={gameData ? gameData.conference_link : null} />
+        <input name='conference-link' type='url' defaultValue={gameData ? gameData.conference_link : null} />
       </label>
       <hr />
       <label>
