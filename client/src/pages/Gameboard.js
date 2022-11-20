@@ -47,6 +47,13 @@ const Gameboard = ({ socket, user }) => {
       setGame(req);
     });
 
+    socket.on('checked-in-participant', req => {
+      console.log('checked-in-participant');
+      console.log(req);
+      setParticipants(req.participants);
+      setCurrentParticipant(req.participants.find(p => p.user_key === user.id));
+    });
+
     socket.on('final-round-set', req => {
       console.log('final-round-set');
       console.log(req);
@@ -229,6 +236,10 @@ const Gameboard = ({ socket, user }) => {
     })
   }
 
+  const handleCheckin = () => {
+    socket.emit('participant-checked-in', {user: user.id});
+  };
+
   return (
     <>
     <Modal
@@ -246,6 +257,10 @@ const Gameboard = ({ socket, user }) => {
     {
       currentParticipant && !presents.find(present => present.gifter === currentParticipant.user_key) &&
       <button onClick={() => handleAddPresent(game)}>Add Present</button>
+    }
+    {
+      currentParticipant && !currentParticipant.checked_in &&
+      <button onClick={handleCheckin}>Check In</button>
     }
     <div className="Gameboard" style={{ display: 'flex' }}>
       {

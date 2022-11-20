@@ -88,6 +88,16 @@ io.on('connection', socket => {
     });
   });
 
+  socket.on('participant-checked-in', req => {
+    console.log(`Checking user ${req.user} into game ${socket.game}`);
+    console.log(socket.game)
+    connection.query('UPDATE participants SET checked_in=1 WHERE game_key=? AND user_key=?;SELECT * FROM participants WHERE game_key=? ORDER BY turn', [socket.game, req.user, socket.game], (error, results, fields) => {
+      if (error) throw error;
+      console.log(results);
+      io.in(socket.game).emit('checked-in-participant', {participants: results[1]});
+    });
+  });
+
   socket.on('restart-game', req => {
     console.log(`Restarting game ${socket.game}`);
     const updateHistory = `DELETE FROM game_history WHERE game_key=${socket.game}`;
