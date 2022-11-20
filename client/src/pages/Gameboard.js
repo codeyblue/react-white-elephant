@@ -263,6 +263,7 @@ const Gameboard = ({ socket, user }) => {
       <button onClick={handleCheckin}>Check In</button>
     }
     <div className="Gameboard" style={{ display: 'flex' }}>
+      <p>{game.status}</p>
       {
         game.administrator === user.id &&
         game.status === 'setup' &&
@@ -271,6 +272,11 @@ const Gameboard = ({ socket, user }) => {
       {
         game.administrator === user.id &&
         game.status === 'ready' &&
+        participants &&
+        presents &&
+        participants.length > 1 &&
+        presents.length === participants.length &&
+        participants.every(pa => { return (presents.filter(pr => pr.gifter === pa.user_key ).length > 0 && pa.checked_in)}) &&
         <button onClick={setGameStart}>Start Game</button>
       }
       {isLoading && <p>Loading...</p>}
