@@ -90,11 +90,36 @@ io.on('connection', socket => {
 
   socket.on('participant-checked-in', req => {
     console.log(`Checking user ${req.user} into game ${socket.game}`);
-    console.log(socket.game)
-    connection.query('UPDATE participants SET checked_in=1 WHERE game_key=? AND user_key=?;SELECT * FROM participants WHERE game_key=? ORDER BY turn', [socket.game, req.user, socket.game], (error, results, fields) => {
+    const getParticipant = `SELECT * FROM participants WHERE game_key=${socket.game} AND user_key=${req.user}`;
+    connection.query(getParticipant, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('checked-in-participant', {participants: results[1]});
+      const participant = results[0];
+      if (!participant) {
+        throw new Error(`No participant with user id ${req.user} for game ${socket.game}`);
+      }
+
+      if (participant.checked_in) {
+        throw new Error(`Participant with user id ${req.user} is already checked in for game ${socket.game}`);
+      }
+
+      const getPresent = `SELECT * FROM presents WHERE gifter=${req.user} AND game_key=${socket.game}`;
+      connection.query(getPresent, (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+        const present = results[0];
+        if (!present) {
+          throw new Error(`Participant with user id ${req.user} cannot be checked into game ${socket.game} because they do not have a present.`);
+        }
+        
+        const updateParticipant = `UPDATE participants SET checked_in=1 WHERE game_key=${socket.game} AND user_key=${req.user}`
+        const getParticipants = `SELECT * FROM participants WHERE game_key=${socket.game} ORDER BY turn`;
+        connection.query(`${updateParticipant}; ${getParticipants}`, (error, results, fields) => {
+          if (error) throw error; 
+          console.log(results);
+          io.in(socket.game).emit('checked-in-participant', {participants: results[1]});
+        });
+      });
     });
   });
 

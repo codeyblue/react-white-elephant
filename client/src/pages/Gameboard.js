@@ -263,7 +263,7 @@ const Gameboard = ({ socket, user }) => {
       <button onClick={() => handleAddPresent(game)}>Add Present</button>
     }
     {
-      currentParticipant && !currentParticipant.checked_in &&
+      currentParticipant && !currentParticipant.checked_in && presents.find(p => p.gifter === currentParticipant.user_key) &&
       <button onClick={handleCheckin}>Check In</button>
     }
     <div className="Gameboard" style={{ display: 'flex' }}>
