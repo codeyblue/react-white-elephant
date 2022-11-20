@@ -188,10 +188,32 @@ io.on('connection', socket => {
 
   socket.on('set-game-ready', req => {
     console.log(`Setting game ${socket.game} to ready state`);
-    connection.query('UPDATE games SET status=? WHERE id=?;SELECT * FROM games WHERE id=?', ['ready', socket.game, socket.game], (error, results, fields) => {
+    const getGame = `SELECT * FROM games WHERE id=${socket.game}`;
+    connection.query(getGame, (error, results, fields) => {
       if (error) throw error;
       console.log(results);
-      io.in(socket.game).emit('game-ready', transformGameData(results[1][0]));
+      if (!results[0]) {
+        throw new Error('Game does not exist');
+      }
+
+      if (results[0].status !== 'setup') {
+        throw new Error('Game must be in "setup" mode');
+      }
+
+      const getParticipants = `SELECT * FROM participants WHERE game_key=${socket.game}`;
+      connection.query(getParticipants, (error, results, fields) => {
+        if (error) throw error;
+        console.log(results);
+        if (results.length <= 1) {
+          throw new Error ('There must be at least two participants to mark a game as ready');
+        }
+        const updateStatus = `UPDATE games SET status='ready' WHERE id=${socket.game}`;
+        connection.query(`${updateStatus};${getGame}`, (error, results, fields) => {
+          if (error) throw error;
+          console.log(results);
+          io.in(socket.game).emit('game-ready', transformGameData(results[1][0]));
+        });
+      });
     });
   });
 
